@@ -7,8 +7,8 @@ go 1.27
 // replace github.com/antonybholmes/go-sys => ../go-sys
 
 require (
-	github.com/antonybholmes/go-mailserver v0.0.0-20261110151329-217742257560
-	github.com/antonybholmes/go-sys v0.0.0-20261110151334-69bf4fef33df
+	github.com/antonybholmes/go-mailserver v0.0.0-20261111175659-f8a87cede7a2
+	github.com/antonybholmes/go-sys v0.0.0-20261112231824-277e38ba69f2
 	github.com/aws/aws-sdk-go-v2 v1.48.0
 	github.com/aws/aws-sdk-go-v2/config v1.33.18
 	github.com/aws/aws-sdk-go-v2/service/sqs v1.53.0
