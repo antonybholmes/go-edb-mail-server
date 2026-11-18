@@ -38,7 +38,7 @@ func ConsumeRedis(pool *ants.Pool) {
 		}
 
 		err = pool.Submit(func() {
-			err := processMessage(msg)
+			err := processValKeyMessages(msg)
 
 			if err != nil {
 				log.Debug().Msgf("error sending email: %v", err)
@@ -52,7 +52,7 @@ func ConsumeRedis(pool *ants.Pool) {
 	}
 }
 
-func processMessage(msg *redis.Message) error {
+func processValKeyMessages(msg *redis.Message) error {
 	var m mailserver.MailItem
 
 	err := json.Unmarshal([]byte(msg.Payload), &m)

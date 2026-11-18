@@ -1,23 +1,36 @@
-package consts
+package config
 
 import (
 	"os"
+	"sync"
 
 	"github.com/antonybholmes/go-sys"
 	"github.com/antonybholmes/go-sys/env"
 	"github.com/aws/aws-sdk-go-v2/aws"
 )
 
+type AppConfig struct {
+	App struct {
+		Version sys.VersionInfo `yaml:"-"`
+	} `yaml:"-"`
+	AWS struct {
+		SQS struct {
+			QueueURL string `yaml:"-"`
+		}
+	} `yaml:"-"`
+}
+
 const (
 	AppName        = "Experiments Mail Server"
-	AppId          = "edb-mail-server"
+	AppId          = "edb-mailserver"
 	EmailFrom      = "Experiments Team <donotreply@rdf-lab.org>"
 	ProductName    = "Experiments"
 	TextDoNotReply = "Please do not reply to this email as we are not able to respond to messages sent to this address." //"Please do not reply to this message. It was sent from a notification-only email address that we don't monitor."
 )
 
 var (
-	Version sys.VersionInfo
+	once sync.Once
+	cfg  *AppConfig
 
 	Updated       string
 	RedisAddr     string
@@ -28,7 +41,7 @@ var (
 	SqsQueueURL    *string
 )
 
-func init() {
+func load() *AppConfig {
 
 	env.Load("consts.env")
 	//env.Load("version.env")
@@ -45,5 +58,16 @@ func init() {
 
 	UrlSignIn = os.Getenv("URL_SIGN_IN")
 
-	Version = sys.Must(sys.LoadVersionInfo("version.json"))
+	cfg = AppConfig{}
+	cfg.App.Version = sys.Must(sys.LoadVersionInfo("version.json"))
+
+	return &cfg
+}
+
+func Instance() *AppConfig {
+	once.Do(func() {
+		cfg = load()
+	})
+
+	return cfg
 }
