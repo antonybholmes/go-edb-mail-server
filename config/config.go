@@ -11,20 +11,20 @@ import (
 )
 
 type AppConfig struct {
-	App struct {
-		From       string          `yaml:"from"`
-		DoNotReply string          `yaml:"doNotReply"`
-		Version    sys.VersionInfo `yaml:"-"`
-	} `yaml:"app"`
+	Redis struct {
+		Addr     string `yaml:"-"`
+		Password string `yaml:"-"`
+	} `yaml:"-"`
 	AWS struct {
 		SQS struct {
 			QueueURL string `yaml:"-"`
 		}
 	} `yaml:"-"`
-	Redis struct {
-		Addr     string `yaml:"-"`
-		Password string `yaml:"-"`
-	} `yaml:"-"`
+	App struct {
+		From       string          `yaml:"from"`
+		DoNotReply string          `yaml:"doNotReply"`
+		Version    sys.VersionInfo `yaml:"-"`
+	} `yaml:"app"`
 }
 
 const (

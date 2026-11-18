@@ -2,11 +2,9 @@ package main
 
 import (
 	"context"
-	"net/mail"
 
-	"github.com/antonybholmes/go-edbmailserver/config"
-	email "github.com/antonybholmes/go-edbmailserver/mail"
-	"github.com/antonybholmes/go-mailserver/sesmailserver"
+	"github.com/antonybholmes/go-edb-mailserver/config"
+	email "github.com/antonybholmes/go-edb-mailserver/mail"
 	"github.com/antonybholmes/go-sys"
 	"github.com/antonybholmes/go-sys/env"
 	"github.com/antonybholmes/go-sys/log"
@@ -45,10 +43,6 @@ func main() {
 
 	env.Ls()
 
-	from := sys.Must(mail.ParseAddress(cfg.App.From))
-
-	sesmailserver.InitSesMailer(from)
-
 	//env.Reload()
 	//env.Load("consts.env")
 	//env.Load("version.env")
@@ -60,8 +54,8 @@ func main() {
 
 	ctx := context.Background()
 
-	emailHandler := email.EmailHandler{Config: cfg}
-	var consumer QueueProcessor = NewSQSEmailConsumer(cfg, &emailHandler, pool)
+	emailHandler := email.NewEmailHandler(cfg)
+	var consumer QueueProcessor = NewSQSEmailConsumer(cfg, emailHandler, pool)
 
 	//ConsumeRedis(pool)
 	consumer.Consume(ctx)

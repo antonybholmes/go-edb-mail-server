@@ -1,19 +1,20 @@
-module github.com/antonybholmes/go-edbmailserver
+module github.com/antonybholmes/go-edb-mailserver
 
 go 1.27.4
 
-replace github.com/antonybholmes/go-mailserver => ../go-mailserver
+replace github.com/antonybholmes/go-mail => ../go-mail
 
 replace github.com/antonybholmes/go-sys => ../go-sys
 
 require (
-	github.com/antonybholmes/go-mailserver v0.0.0-20261111175659-f8a87cede7a2
+	github.com/antonybholmes/go-mail v0.0.0-20261111175659-f8a87cede7a2
 	github.com/antonybholmes/go-sys v0.0.0-20261112231824-277e38ba69f2
 	github.com/aws/aws-sdk-go-v2 v1.48.0
 	github.com/aws/aws-sdk-go-v2/config v1.33.18
 	github.com/aws/aws-sdk-go-v2/service/sqs v1.53.0
 	github.com/panjf2000/ants v1.3.0
 	github.com/redis/go-redis/v9 v9.23.0
+	go.yaml.in/yaml/v4 v4.0.0
 	golang.org/x/text v0.44.0
 )
 
@@ -47,7 +48,6 @@ require (
 	github.com/xuri/excelize/v2 v2.11.1 // indirect
 	github.com/xuri/nfp v0.0.2-0.20250530014748-2ddeb826f9a9 // indirect
 	go.uber.org/atomic v1.12.0 // indirect
-	go.yaml.in/yaml/v4 v4.0.0
 	golang.org/x/crypto v0.59.0 // indirect
 	golang.org/x/net v0.62.0 // indirect
 	golang.org/x/sys v0.50.0 // indirect

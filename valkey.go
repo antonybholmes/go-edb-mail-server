@@ -4,12 +4,12 @@ import (
 	"context"
 	"encoding/json"
 
-	"github.com/antonybholmes/go-edbmailserver/config"
+	"github.com/antonybholmes/go-edb-mailserver/config"
 	"github.com/antonybholmes/go-sys"
 
-	edbmail "github.com/antonybholmes/go-edbmailserver/mail"
+	mailserver "github.com/antonybholmes/go-edb-mailserver/mail"
 
-	mailserver "github.com/antonybholmes/go-mailserver"
+	email "github.com/antonybholmes/go-mail"
 	"github.com/antonybholmes/go-sys/log"
 	"github.com/panjf2000/ants"
 	"github.com/redis/go-redis/v9"
@@ -18,14 +18,14 @@ import (
 type (
 	ValkeyHandler struct {
 		Config       *config.AppConfig
-		EmailHandler *edbmail.EmailHandler
+		EmailHandler *mailserver.EmailHandler
 		pool         *ants.Pool
 		backoff      *sys.Backoff
 	}
 )
 
 func NewValkeyHandler(config *config.AppConfig,
-	emailHandler *edbmail.EmailHandler,
+	emailHandler *mailserver.EmailHandler,
 	pool *ants.Pool) *ValkeyHandler {
 	return &ValkeyHandler{
 		Config:       config,
@@ -51,7 +51,7 @@ func (h *ValkeyHandler) Consume() {
 
 	log.Debug().Msgf("%s %s", config.AppId, h.Config.Redis.Addr)
 
-	subscriber := rdb.Subscribe(ctx, mailserver.EmailQueueChannel)
+	subscriber := rdb.Subscribe(ctx, email.EmailQueueChannel)
 
 	for {
 		msg, err := subscriber.ReceiveMessage(ctx)
@@ -76,7 +76,7 @@ func (h *ValkeyHandler) Consume() {
 }
 
 func (h *ValkeyHandler) processMessages(msg *redis.Message) error {
-	var m mailserver.MailItem
+	var m email.MailItem
 
 	err := json.Unmarshal([]byte(msg.Payload), &m)
 

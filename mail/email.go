@@ -2,17 +2,18 @@ package mail
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"html/template"
 	"net/mail"
 	"net/url"
 	"strings"
 
-	"github.com/antonybholmes/go-edbmailserver/config"
-	mailserver "github.com/antonybholmes/go-mailserver"
+	"github.com/antonybholmes/go-edb-mailserver/config"
+	email "github.com/antonybholmes/go-mail"
+	"github.com/antonybholmes/go-sys"
 	"github.com/antonybholmes/go-sys/log"
 
-	"github.com/antonybholmes/go-mailserver/sesmailserver"
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
 )
@@ -29,43 +30,51 @@ type (
 		Name          string
 		From          string
 		TimeSensitive *TimeSensitive
-		Payload       *mailserver.Payload
+		Payload       *email.Payload
 		Link          string
 		DoNotReply    string
 	}
 
 	EmailHandler struct {
 		Config *config.AppConfig
+		Mailer email.Mailer
 	}
 )
 
 const (
-	JwtParam       = "jwt"
-	FooterTemplate = "templates/email/footer.html"
+	JwtParam           = "jwt"
+	FooterTemplateFile = "templates/html/emails/footer.html"
 
-	EmailQueueTypeVerify          = "verify"
-	EmailQueueTypeVerified        = "verified"
-	EmailQueueTypePasswordless    = "passwordless"
-	EmailQueueTypePasswordReset   = "password-reset"
-	EmailQueueTypePasswordUpdated = "password-updated"
-	EmailQueueTypeEmailReset      = "email-reset"
-	EmailQueueTypeEmailUpdated    = "email-updated"
-	EmailQueueTypeAccountCreated  = "account-created"
-	EmailQueueTypeAccountUpdated  = "account-updated"
-	EmailQueueTypeOTP             = "otp"
+	EmailTypeVerify          = "verify"
+	EmailTypeVerified        = "verified"
+	EmailTypePasswordless    = "passwordless"
+	EmailTypePasswordReset   = "password-reset"
+	EmailTypePasswordUpdated = "password-updated"
+	EmailTypeEmailReset      = "email-reset"
+	EmailTypeEmailUpdated    = "email-updated"
+	EmailTypeAccountCreated  = "account-created"
+	EmailTypeAccountUpdated  = "account-updated"
+	EmailTypeOTP             = "otp"
 )
 
-func (h *EmailHandler) SendPasswordlessSigninEmail(mail *mailserver.MailItem) error {
+func NewEmailHandler(cfg *config.AppConfig) *EmailHandler {
+	return &EmailHandler{
+		Config: cfg,
+		Mailer: email.NewSesMailer(sys.Must(mail.ParseAddress(cfg.App.From))),
+	}
+}
+
+func (h *EmailHandler) SendPasswordlessSigninEmail(mail *email.MailItem) error {
 
 	var file string
 
 	if mail.Mode == "api" {
-		file = "templates/email/passwordless/api.html"
+		file = "templates/html/emails/passwordless/api.html"
 	} else {
-		file = "templates/email/passwordless/web.html"
+		file = "templates/html/emails/passwordless/web.html"
 	}
 
-	//file := "templates/email/passwordless/web.html"
+	//file := "templates/html/emails/passwordless/web.html"
 
 	return h.SendEmailWithToken("Passwordless Sign In",
 		mail,
@@ -73,14 +82,14 @@ func (h *EmailHandler) SendPasswordlessSigninEmail(mail *mailserver.MailItem) er
 		file)
 }
 
-func (h *EmailHandler) SendVerifyEmail(mail *mailserver.MailItem) error {
+func (h *EmailHandler) SendVerifyEmail(mail *email.MailItem) error {
 
 	var file string
 
 	if mail.Mode == "api" {
-		file = "templates/email/verify/api.html"
+		file = "templates/html/emails/verify/api.html"
 	} else {
-		file = "templates/email/verify/web.html"
+		file = "templates/html/emails/verify/web.html"
 	}
 
 	return h.SendEmailWithToken("Email Address Verification",
@@ -89,9 +98,9 @@ func (h *EmailHandler) SendVerifyEmail(mail *mailserver.MailItem) error {
 		file)
 }
 
-func (h *EmailHandler) SendVerifiedEmail(mail *mailserver.MailItem) error {
+func (h *EmailHandler) SendVerifiedEmail(mail *email.MailItem) error {
 
-	file := "templates/email/verify/verified.html"
+	file := "templates/html/emails/verify/verified.html"
 
 	return h.SendEmailWithToken("Email Address Verified",
 		mail,
@@ -99,14 +108,14 @@ func (h *EmailHandler) SendVerifiedEmail(mail *mailserver.MailItem) error {
 		file)
 }
 
-func (h *EmailHandler) SendPasswordResetEmail(mail *mailserver.MailItem) error {
+func (h *EmailHandler) SendPasswordResetEmail(mail *email.MailItem) error {
 
 	var file string
 
 	if mail.LinkUrl != "" {
-		file = "templates/email/password/reset/web.html"
+		file = "templates/html/emails/password/reset/web.html"
 	} else {
-		file = "templates/email/password/reset/api.html"
+		file = "templates/html/emails/password/reset/api.html"
 	}
 
 	return h.SendEmailWithToken("Password Reset",
@@ -115,14 +124,14 @@ func (h *EmailHandler) SendPasswordResetEmail(mail *mailserver.MailItem) error {
 		file)
 }
 
-func (h *EmailHandler) SendPasswordUpdatedEmail(mail *mailserver.MailItem) error {
+func (h *EmailHandler) SendPasswordUpdatedEmail(mail *email.MailItem) error {
 
 	var file string
 
 	if mail.LinkUrl != "" {
-		file = "templates/email/password/switch-to-passwordless.html"
+		file = "templates/html/emails/password/switch-to-passwordless.html"
 	} else {
-		file = "templates/email/password/updated.html"
+		file = "templates/html/emails/password/updated.html"
 	}
 
 	return h.SendEmailWithToken("Password Updated",
@@ -131,14 +140,14 @@ func (h *EmailHandler) SendPasswordUpdatedEmail(mail *mailserver.MailItem) error
 		file)
 }
 
-func (h *EmailHandler) SendEmailResetEmail(mail *mailserver.MailItem) error {
+func (h *EmailHandler) SendEmailResetEmail(mail *email.MailItem) error {
 
 	var file string
 
 	if mail.LinkUrl != "" {
-		file = "templates/email/email/reset/web.html"
+		file = "templates/html/emails/email/reset/web.html"
 	} else {
-		file = "templates/email/email/reset/api.html"
+		file = "templates/html/emails/email/reset/api.html"
 	}
 
 	return h.SendEmailWithToken("Email Reset",
@@ -147,9 +156,9 @@ func (h *EmailHandler) SendEmailResetEmail(mail *mailserver.MailItem) error {
 		file)
 }
 
-func (h *EmailHandler) SendEmailUpdatedEmail(mail *mailserver.MailItem) error {
+func (h *EmailHandler) SendEmailUpdatedEmail(mail *email.MailItem) error {
 
-	file := "templates/email/email/updated.html"
+	file := "templates/html/emails/email/updated.html"
 
 	return h.SendEmailWithToken("Email Updated",
 		mail,
@@ -157,9 +166,9 @@ func (h *EmailHandler) SendEmailUpdatedEmail(mail *mailserver.MailItem) error {
 		file)
 }
 
-func (h *EmailHandler) SendAccountCreatedEmail(mail *mailserver.MailItem) error {
+func (h *EmailHandler) SendAccountCreatedEmail(mail *email.MailItem) error {
 
-	file := "templates/email/account/created.html"
+	file := "templates/html/emails/account/created.html"
 
 	return h.SendEmailWithToken("Account Created",
 		mail,
@@ -167,9 +176,9 @@ func (h *EmailHandler) SendAccountCreatedEmail(mail *mailserver.MailItem) error 
 		file)
 }
 
-func (h *EmailHandler) SendAccountUpdatedEmail(mail *mailserver.MailItem) error {
+func (h *EmailHandler) SendAccountUpdatedEmail(mail *email.MailItem) error {
 
-	file := "templates/email/account/updated.html"
+	file := "templates/html/emails/account/updated.html"
 
 	return h.SendEmailWithToken("Account Updated",
 		mail,
@@ -177,9 +186,9 @@ func (h *EmailHandler) SendAccountUpdatedEmail(mail *mailserver.MailItem) error 
 		file)
 }
 
-func (h *EmailHandler) SendOTPEmail(mail *mailserver.MailItem) error {
+func (h *EmailHandler) SendOTPEmail(mail *email.MailItem) error {
 
-	file := "templates/email/otp/otp.html"
+	file := "templates/html/emails/otp/otp.html"
 
 	//log.Debug().Msgf("send totp email to %s", mail.To)
 
@@ -196,7 +205,7 @@ func (h *EmailHandler) SendOTPEmail(mail *mailserver.MailItem) error {
 }
 
 func (h *EmailHandler) SendEmailWithToken(subject string,
-	m *mailserver.MailItem,
+	m *email.MailItem,
 	linkUrl string,
 	file string) error {
 
@@ -212,7 +221,8 @@ func (h *EmailHandler) SendEmailWithToken(subject string,
 
 	var body bytes.Buffer
 
-	t, err := template.ParseFiles(file, FooterTemplate)
+	// All templates are called layout
+	t, err := template.ParseFiles(file, FooterTemplateFile)
 
 	if err != nil {
 		return err
@@ -287,7 +297,7 @@ func (h *EmailHandler) SendEmailWithToken(subject string,
 		Name:       firstName,
 		Payload:    m.Payload,
 		Link:       link,
-		From:       h.Config.App.From,
+		From:       m.From,
 		DoNotReply: h.Config.App.DoNotReply,
 	}
 
@@ -318,7 +328,7 @@ func (h *EmailHandler) SendEmailWithToken(subject string,
 
 	//log.Debug().Msgf("email %v %v %v", address, subject, body.String())
 
-	err = sesmailserver.SendHtmlMail(address, subject, body.String())
+	err = h.Mailer.SendHtmlMail(context.Background(), address, subject, body.String())
 
 	if err != nil {
 		return err
@@ -329,34 +339,32 @@ func (h *EmailHandler) SendEmailWithToken(subject string,
 	return nil
 }
 
-func (h *EmailHandler) SendEmail(m *mailserver.MailItem) error {
-
-	//log.Debug().Msgf("send email %s %s", m.To, m.EmailType)
+func (h *EmailHandler) SendEmail(m *email.MailItem) error {
 
 	switch m.EmailType {
-	case EmailQueueTypeVerify:
+	case EmailTypeVerify:
 		return h.SendVerifyEmail(m)
-	case EmailQueueTypeVerified:
+	case EmailTypeVerified:
 		return h.SendVerifiedEmail(m)
-	case EmailQueueTypePasswordless:
+	case EmailTypePasswordless:
 		return h.SendPasswordlessSigninEmail(m)
-	case EmailQueueTypePasswordReset:
+	case EmailTypePasswordReset:
 		return h.SendPasswordResetEmail(m)
-	case EmailQueueTypePasswordUpdated:
+	case EmailTypePasswordUpdated:
 		return h.SendPasswordUpdatedEmail(m)
-	case EmailQueueTypeEmailReset:
+	case EmailTypeEmailReset:
 		return h.SendEmailResetEmail(m)
-	case EmailQueueTypeEmailUpdated:
+	case EmailTypeEmailUpdated:
 		return h.SendEmailUpdatedEmail(m)
-	case EmailQueueTypeAccountCreated:
+	case EmailTypeAccountCreated:
 		return h.SendAccountCreatedEmail(m)
-	case EmailQueueTypeAccountUpdated:
+	case EmailTypeAccountUpdated:
 		return h.SendAccountUpdatedEmail(m)
-	case EmailQueueTypeOTP:
+	case EmailTypeOTP:
 		return h.SendOTPEmail(m)
 	default:
 		log.Debug().Msgf("invalid email type: %s", m.EmailType)
+		return fmt.Errorf("unsupported email type %q", m.EmailType)
 	}
 
-	return nil
 }

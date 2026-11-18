@@ -5,10 +5,10 @@ import (
 	"encoding/json"
 	"fmt"
 
-	appconfig "github.com/antonybholmes/go-edbmailserver/config"
+	appconfig "github.com/antonybholmes/go-edb-mailserver/config"
 
-	edbmail "github.com/antonybholmes/go-edbmailserver/mail"
-	mailserver "github.com/antonybholmes/go-mailserver"
+	edbmail "github.com/antonybholmes/go-edb-mailserver/mail"
+	mailserver "github.com/antonybholmes/go-mail"
 	"github.com/antonybholmes/go-sys"
 	"github.com/antonybholmes/go-sys/log"
 	"github.com/aws/aws-sdk-go-v2/aws"
