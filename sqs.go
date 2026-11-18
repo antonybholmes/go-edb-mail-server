@@ -26,16 +26,27 @@ const (
 
 type SQSEmailConsumer struct {
 	Config       *appconfig.AppConfig
+	Client       *sqs.Client
 	EmailHandler *edbmail.EmailHandler
 	pool         *ants.Pool
 	backoff      *sys.Backoff
 }
 
-func NewSQSEmailConsumer(config *appconfig.AppConfig,
+func NewSQSEmailConsumer(appConfig *appconfig.AppConfig,
 	emailHandler *edbmail.EmailHandler,
-	pool *ants.Pool) *SQSEmailConsumer {
+	pool *ants.Pool,
+) *SQSEmailConsumer {
+
+	cfg, err := config.LoadDefaultConfig(context.Background())
+	if err != nil {
+		log.Fatal().Msgf("Unable to load AWS config: %v", err)
+	}
+
+	client := sqs.NewFromConfig(cfg)
+
 	return &SQSEmailConsumer{
-		Config:       config,
+		Config:       appConfig,
+		Client:       client,
 		EmailHandler: emailHandler,
 		pool:         pool,
 		backoff:      sys.NewDefaultBackoff(),
@@ -44,21 +55,12 @@ func NewSQSEmailConsumer(config *appconfig.AppConfig,
 
 // Consume starts consuming messages from the SQS queue.
 // This is a long-running function that continuously polls the queue for messages.
-func (c *SQSEmailConsumer) Consume() {
-
-	ctx := context.Background()
-
-	cfg, err := config.LoadDefaultConfig(ctx)
-	if err != nil {
-		log.Fatal().Msgf("Unable to load AWS config: %v", err)
-	}
-
-	client := sqs.NewFromConfig(cfg)
+func (c *SQSEmailConsumer) Consume(ctx context.Context) {
 
 	log.Debug().Msgf("start sqs %s", c.Config.AWS.SQS.QueueURL)
 
 	for {
-		messageBatch, err := client.ReceiveMessage(ctx, &sqs.ReceiveMessageInput{
+		messageBatch, err := c.Client.ReceiveMessage(ctx, &sqs.ReceiveMessageInput{
 			QueueUrl:            aws.String(c.Config.AWS.SQS.QueueURL),
 			MaxNumberOfMessages: MaxMessages,
 			WaitTimeSeconds:     WaitTimeSecs,
@@ -82,7 +84,7 @@ func (c *SQSEmailConsumer) Consume() {
 		// process each message individually using the worker pool
 		for _, message := range messageBatch.Messages {
 			submitErr := c.pool.Submit(func() {
-				if err := c.processMessage(client, ctx, message); err != nil {
+				if err := c.processMessage(ctx, message); err != nil {
 					log.Error().Msgf("error processing SQS message: %v", err)
 				}
 			})
@@ -91,7 +93,6 @@ func (c *SQSEmailConsumer) Consume() {
 				log.Error().Msgf("failed to submit SQS message: %v", submitErr)
 			}
 		}
-
 	}
 }
 
@@ -112,7 +113,8 @@ func (c *SQSEmailConsumer) Consume() {
 // 	return nil
 // }
 
-func (c *SQSEmailConsumer) processMessage(client *sqs.Client, ctx context.Context, message types.Message) error {
+func (c *SQSEmailConsumer) processMessage(ctx context.Context,
+	message types.Message) error {
 
 	messageID := "<unknown>"
 	if message.MessageId != nil {
@@ -133,7 +135,7 @@ func (c *SQSEmailConsumer) processMessage(client *sqs.Client, ctx context.Contex
 		return fmt.Errorf("send message %s: %w", messageID, err)
 	}
 
-	if _, err := client.DeleteMessage(ctx, &sqs.DeleteMessageInput{
+	if _, err := c.Client.DeleteMessage(ctx, &sqs.DeleteMessageInput{
 		QueueUrl:      aws.String(c.Config.AWS.SQS.QueueURL),
 		ReceiptHandle: message.ReceiptHandle,
 	}); err != nil {

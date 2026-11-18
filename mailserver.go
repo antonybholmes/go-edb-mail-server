@@ -1,7 +1,9 @@
 package main
 
+import "context"
+
 type (
 	QueueProcessor interface {
-		Consume()
+		Consume(ctx context.Context)
 	}
 )

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"net/mail"
 
 	"github.com/antonybholmes/go-edbmailserver/config"
@@ -57,10 +58,12 @@ func main() {
 
 	defer pool.Release()
 
+	ctx := context.Background()
+
 	emailHandler := email.EmailHandler{Config: cfg}
 	var consumer QueueProcessor = NewSQSEmailConsumer(cfg, &emailHandler, pool)
 
 	//ConsumeRedis(pool)
-	consumer.Consume()
+	consumer.Consume(ctx)
 	//consumeKafka(pool)
 }
