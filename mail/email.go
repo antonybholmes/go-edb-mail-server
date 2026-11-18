@@ -8,13 +8,35 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/antonybholmes/go-edbmailserver/consts"
+	"github.com/antonybholmes/go-edbmailserver/config"
 	mailserver "github.com/antonybholmes/go-mailserver"
 	"github.com/antonybholmes/go-sys/log"
 
 	"github.com/antonybholmes/go-mailserver/sesmailserver"
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
+)
+
+//const RedirectUrlParam = "redirectUrl"
+
+type (
+	TimeSensitive struct {
+		ContentType string
+		Time        string
+	}
+
+	EmailBody struct {
+		Name          string
+		From          string
+		TimeSensitive *TimeSensitive
+		Payload       *mailserver.Payload
+		Link          string
+		DoNotReply    string
+	}
+
+	EmailHandler struct {
+		Config *config.AppConfig
+	}
 )
 
 const (
@@ -33,22 +55,7 @@ const (
 	EmailQueueTypeOTP             = "otp"
 )
 
-//const RedirectUrlParam = "redirectUrl"
-
-type TimeSensitive struct {
-	ContentType string
-	Time        string
-}
-type EmailBody struct {
-	Name          string
-	From          string
-	TimeSensitive *TimeSensitive
-	Payload       *mailserver.Payload
-	Link          string
-	DoNotReply    string
-}
-
-func SendPasswordlessSigninEmail(mail *mailserver.MailItem) error {
+func (h *EmailHandler) SendPasswordlessSigninEmail(mail *mailserver.MailItem) error {
 
 	var file string
 
@@ -60,13 +67,13 @@ func SendPasswordlessSigninEmail(mail *mailserver.MailItem) error {
 
 	//file := "templates/email/passwordless/web.html"
 
-	return SendEmailWithToken("Passwordless Sign In",
+	return h.SendEmailWithToken("Passwordless Sign In",
 		mail,
-		consts.UrlSignIn,
+		config.UrlSignIn,
 		file)
 }
 
-func SendVerifyEmail(mail *mailserver.MailItem) error {
+func (h *EmailHandler) SendVerifyEmail(mail *mailserver.MailItem) error {
 
 	var file string
 
@@ -76,23 +83,23 @@ func SendVerifyEmail(mail *mailserver.MailItem) error {
 		file = "templates/email/verify/web.html"
 	}
 
-	return SendEmailWithToken("Email Address Verification",
+	return h.SendEmailWithToken("Email Address Verification",
 		mail,
-		consts.UrlVerifyEmail,
+		config.UrlVerifyEmail,
 		file)
 }
 
-func SendVerifiedEmail(mail *mailserver.MailItem) error {
+func (h *EmailHandler) SendVerifiedEmail(mail *mailserver.MailItem) error {
 
 	file := "templates/email/verify/verified.html"
 
-	return SendEmailWithToken("Email Address Verified",
+	return h.SendEmailWithToken("Email Address Verified",
 		mail,
 		"",
 		file)
 }
 
-func SendPasswordResetEmail(mail *mailserver.MailItem) error {
+func (h *EmailHandler) SendPasswordResetEmail(mail *mailserver.MailItem) error {
 
 	var file string
 
@@ -102,13 +109,13 @@ func SendPasswordResetEmail(mail *mailserver.MailItem) error {
 		file = "templates/email/password/reset/api.html"
 	}
 
-	return SendEmailWithToken("Password Reset",
+	return h.SendEmailWithToken("Password Reset",
 		mail,
 		mail.LinkUrl,
 		file)
 }
 
-func SendPasswordUpdatedEmail(mail *mailserver.MailItem) error {
+func (h *EmailHandler) SendPasswordUpdatedEmail(mail *mailserver.MailItem) error {
 
 	var file string
 
@@ -118,13 +125,13 @@ func SendPasswordUpdatedEmail(mail *mailserver.MailItem) error {
 		file = "templates/email/password/updated.html"
 	}
 
-	return SendEmailWithToken("Password Updated",
+	return h.SendEmailWithToken("Password Updated",
 		mail,
 		mail.LinkUrl,
 		file)
 }
 
-func SendEmailResetEmail(mail *mailserver.MailItem) error {
+func (h *EmailHandler) SendEmailResetEmail(mail *mailserver.MailItem) error {
 
 	var file string
 
@@ -134,49 +141,49 @@ func SendEmailResetEmail(mail *mailserver.MailItem) error {
 		file = "templates/email/email/reset/api.html"
 	}
 
-	return SendEmailWithToken("Email Reset",
+	return h.SendEmailWithToken("Email Reset",
 		mail,
 		mail.LinkUrl,
 		file)
 }
 
-func SendEmailUpdatedEmail(mail *mailserver.MailItem) error {
+func (h *EmailHandler) SendEmailUpdatedEmail(mail *mailserver.MailItem) error {
 
 	file := "templates/email/email/updated.html"
 
-	return SendEmailWithToken("Email Updated",
+	return h.SendEmailWithToken("Email Updated",
 		mail,
 		mail.LinkUrl,
 		file)
 }
 
-func SendAccountCreatedEmail(mail *mailserver.MailItem) error {
+func (h *EmailHandler) SendAccountCreatedEmail(mail *mailserver.MailItem) error {
 
 	file := "templates/email/account/created.html"
 
-	return SendEmailWithToken("Account Created",
+	return h.SendEmailWithToken("Account Created",
 		mail,
 		mail.LinkUrl,
 		file)
 }
 
-func SendAccountUpdatedEmail(mail *mailserver.MailItem) error {
+func (h *EmailHandler) SendAccountUpdatedEmail(mail *mailserver.MailItem) error {
 
 	file := "templates/email/account/updated.html"
 
-	return SendEmailWithToken("Account Updated",
+	return h.SendEmailWithToken("Account Updated",
 		mail,
 		mail.LinkUrl,
 		file)
 }
 
-func SendOTPEmail(mail *mailserver.MailItem) error {
+func (h *EmailHandler) SendOTPEmail(mail *mailserver.MailItem) error {
 
 	file := "templates/email/otp/otp.html"
 
 	//log.Debug().Msgf("send totp email to %s", mail.To)
 
-	err := SendEmailWithToken(fmt.Sprintf("%s One-Time Passcode", consts.ProductName),
+	err := h.SendEmailWithToken(fmt.Sprintf("%s One-Time Passcode", config.AppName),
 		mail,
 		"",
 		file)
@@ -188,7 +195,7 @@ func SendOTPEmail(mail *mailserver.MailItem) error {
 	return err
 }
 
-func SendEmailWithToken(subject string,
+func (h *EmailHandler) SendEmailWithToken(subject string,
 	m *mailserver.MailItem,
 	linkUrl string,
 	file string) error {
@@ -280,8 +287,8 @@ func SendEmailWithToken(subject string,
 		Name:       firstName,
 		Payload:    m.Payload,
 		Link:       link,
-		From:       consts.AppName,
-		DoNotReply: consts.TextDoNotReply,
+		From:       h.Config.App.From,
+		DoNotReply: h.Config.App.DoNotReply,
 	}
 
 	if m.TTL != "" {
@@ -322,31 +329,31 @@ func SendEmailWithToken(subject string,
 	return nil
 }
 
-func SendEmail(m *mailserver.MailItem) error {
+func (h *EmailHandler) SendEmail(m *mailserver.MailItem) error {
 
 	//log.Debug().Msgf("send email %s %s", m.To, m.EmailType)
 
 	switch m.EmailType {
 	case EmailQueueTypeVerify:
-		return SendVerifyEmail(m)
+		return h.SendVerifyEmail(m)
 	case EmailQueueTypeVerified:
-		return SendVerifiedEmail(m)
+		return h.SendVerifiedEmail(m)
 	case EmailQueueTypePasswordless:
-		return SendPasswordlessSigninEmail(m)
+		return h.SendPasswordlessSigninEmail(m)
 	case EmailQueueTypePasswordReset:
-		return SendPasswordResetEmail(m)
+		return h.SendPasswordResetEmail(m)
 	case EmailQueueTypePasswordUpdated:
-		return SendPasswordUpdatedEmail(m)
+		return h.SendPasswordUpdatedEmail(m)
 	case EmailQueueTypeEmailReset:
-		return SendEmailResetEmail(m)
+		return h.SendEmailResetEmail(m)
 	case EmailQueueTypeEmailUpdated:
-		return SendEmailUpdatedEmail(m)
+		return h.SendEmailUpdatedEmail(m)
 	case EmailQueueTypeAccountCreated:
-		return SendAccountCreatedEmail(m)
+		return h.SendAccountCreatedEmail(m)
 	case EmailQueueTypeAccountUpdated:
-		return SendAccountUpdatedEmail(m)
+		return h.SendAccountUpdatedEmail(m)
 	case EmailQueueTypeOTP:
-		return SendOTPEmail(m)
+		return h.SendOTPEmail(m)
 	default:
 		log.Debug().Msgf("invalid email type: %s", m.EmailType)
 	}

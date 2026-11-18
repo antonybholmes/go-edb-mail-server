@@ -5,11 +5,13 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/antonybholmes/go-edbmailserver/consts"
+	appconfig "github.com/antonybholmes/go-edbmailserver/config"
+
 	edbmail "github.com/antonybholmes/go-edbmailserver/mail"
 	mailserver "github.com/antonybholmes/go-mailserver"
 	"github.com/antonybholmes/go-sys"
 	"github.com/antonybholmes/go-sys/log"
+	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/sqs"
 	"github.com/aws/aws-sdk-go-v2/service/sqs/types"
@@ -23,14 +25,20 @@ const (
 )
 
 type SQSEmailConsumer struct {
-	pool    *ants.Pool
-	backoff *sys.Backoff
+	Config       *appconfig.AppConfig
+	EmailHandler *edbmail.EmailHandler
+	pool         *ants.Pool
+	backoff      *sys.Backoff
 }
 
-func NewSQSEmailConsumer(pool *ants.Pool) *SQSEmailConsumer {
+func NewSQSEmailConsumer(config *appconfig.AppConfig,
+	emailHandler *edbmail.EmailHandler,
+	pool *ants.Pool) *SQSEmailConsumer {
 	return &SQSEmailConsumer{
-		pool:    pool,
-		backoff: sys.NewDefaultBackoff(),
+		Config:       config,
+		EmailHandler: emailHandler,
+		pool:         pool,
+		backoff:      sys.NewDefaultBackoff(),
 	}
 }
 
@@ -47,11 +55,11 @@ func (c *SQSEmailConsumer) Consume() {
 
 	client := sqs.NewFromConfig(cfg)
 
-	log.Debug().Msgf("start sqs %s", *consts.SqsQueueURL)
+	log.Debug().Msgf("start sqs %s", c.Config.AWS.SQS.QueueURL)
 
 	for {
 		messageBatch, err := client.ReceiveMessage(ctx, &sqs.ReceiveMessageInput{
-			QueueUrl:            consts.SqsQueueURL,
+			QueueUrl:            aws.String(c.Config.AWS.SQS.QueueURL),
 			MaxNumberOfMessages: MaxMessages,
 			WaitTimeSeconds:     WaitTimeSecs,
 		})
@@ -74,7 +82,7 @@ func (c *SQSEmailConsumer) Consume() {
 		// process each message individually using the worker pool
 		for _, message := range messageBatch.Messages {
 			submitErr := c.pool.Submit(func() {
-				if err := processSqsMessage(client, ctx, message); err != nil {
+				if err := c.processMessage(client, ctx, message); err != nil {
 					log.Error().Msgf("error processing SQS message: %v", err)
 				}
 			})
@@ -104,7 +112,7 @@ func (c *SQSEmailConsumer) Consume() {
 // 	return nil
 // }
 
-func processSqsMessage(client *sqs.Client, ctx context.Context, message types.Message) error {
+func (c *SQSEmailConsumer) processMessage(client *sqs.Client, ctx context.Context, message types.Message) error {
 
 	messageID := "<unknown>"
 	if message.MessageId != nil {
@@ -121,12 +129,12 @@ func processSqsMessage(client *sqs.Client, ctx context.Context, message types.Me
 		return fmt.Errorf("decode message %s: %w", messageID, err)
 	}
 
-	if err := edbmail.SendEmail(&m); err != nil {
+	if err := c.EmailHandler.SendEmail(&m); err != nil {
 		return fmt.Errorf("send message %s: %w", messageID, err)
 	}
 
 	if _, err := client.DeleteMessage(ctx, &sqs.DeleteMessageInput{
-		QueueUrl:      consts.SqsQueueURL,
+		QueueUrl:      aws.String(c.Config.AWS.SQS.QueueURL),
 		ReceiptHandle: message.ReceiptHandle,
 	}); err != nil {
 		return fmt.Errorf("delete message %s: %w", messageID, err)
