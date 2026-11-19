@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"html/template"
+	htmltemplate "html/template"
 	"net/mail"
 	"net/url"
 	"strings"
@@ -222,7 +222,7 @@ func (h *EmailHandler) SendEmailWithToken(subject string,
 	var body bytes.Buffer
 
 	// All templates are called layout
-	t, err := template.ParseFiles(file, FooterTemplateFile)
+	t, err := htmltemplate.ParseFiles(file, FooterTemplateFile)
 
 	if err != nil {
 		return err
