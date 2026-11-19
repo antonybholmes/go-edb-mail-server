@@ -3,8 +3,8 @@ package main
 import (
 	"context"
 
-	"github.com/antonybholmes/go-edb-mailserver/config"
-	email "github.com/antonybholmes/go-edb-mailserver/mail"
+	"github.com/antonybholmes/go-edb-mail-server/config"
+	email "github.com/antonybholmes/go-edb-mail-server/mail"
 	"github.com/antonybholmes/go-sys"
 	"github.com/antonybholmes/go-sys/env"
 	"github.com/antonybholmes/go-sys/log"

@@ -1,4 +1,4 @@
-module github.com/antonybholmes/go-edb-mailserver
+module github.com/antonybholmes/go-edb-mail-server
 
 go 1.27.4
 

@@ -5,9 +5,9 @@ import (
 	"encoding/json"
 	"fmt"
 
-	appconfig "github.com/antonybholmes/go-edb-mailserver/config"
+	appconfig "github.com/antonybholmes/go-edb-mail-server/config"
 
-	edbmail "github.com/antonybholmes/go-edb-mailserver/mail"
+	edbmail "github.com/antonybholmes/go-edb-mail-server/mail"
 	mailserver "github.com/antonybholmes/go-mail"
 	"github.com/antonybholmes/go-sys"
 	"github.com/antonybholmes/go-sys/log"

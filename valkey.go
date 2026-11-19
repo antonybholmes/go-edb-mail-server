@@ -4,10 +4,10 @@ import (
 	"context"
 	"encoding/json"
 
-	"github.com/antonybholmes/go-edb-mailserver/config"
+	"github.com/antonybholmes/go-edb-mail-server/config"
 	"github.com/antonybholmes/go-sys"
 
-	mailserver "github.com/antonybholmes/go-edb-mailserver/mail"
+	mailserver "github.com/antonybholmes/go-edb-mail-server/mail"
 
 	email "github.com/antonybholmes/go-mail"
 	"github.com/antonybholmes/go-sys/log"

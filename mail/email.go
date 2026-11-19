@@ -9,7 +9,7 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/antonybholmes/go-edb-mailserver/config"
+	"github.com/antonybholmes/go-edb-mail-server/config"
 	email "github.com/antonybholmes/go-mail"
 	"github.com/antonybholmes/go-sys"
 	"github.com/antonybholmes/go-sys/log"
