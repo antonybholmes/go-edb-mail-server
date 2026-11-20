@@ -7,8 +7,7 @@ import (
 
 	appconfig "github.com/antonybholmes/go-edb-mail-server/config"
 
-	edbmail "github.com/antonybholmes/go-edb-mail-server/mail"
-	mailserver "github.com/antonybholmes/go-mail"
+	email "github.com/antonybholmes/go-mail"
 	"github.com/antonybholmes/go-sys"
 	"github.com/antonybholmes/go-sys/log"
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -20,20 +19,20 @@ import (
 
 // each SQS receive can get up to 5 messages at a time
 const (
-	MaxMessages  = 5
+	//MaxMessages  = 5
 	WaitTimeSecs = 10
 )
 
 type SQSEmailConsumer struct {
 	Config       *appconfig.AppConfig
 	Client       *sqs.Client
-	EmailHandler *edbmail.EmailHandler
+	EmailHandler email.MailQueue
 	pool         *ants.Pool
 	backoff      *sys.Backoff
 }
 
 func NewSQSEmailConsumer(appConfig *appconfig.AppConfig,
-	emailHandler *edbmail.EmailHandler,
+	emailHandler email.MailQueue,
 	pool *ants.Pool,
 ) *SQSEmailConsumer {
 
@@ -60,9 +59,10 @@ func (c *SQSEmailConsumer) Consume(ctx context.Context) {
 	log.Debug().Msgf("start sqs %s", c.Config.AWS.SQS.QueueURL)
 
 	for {
+		// pull as many messages as we have worker threads
 		messageBatch, err := c.Client.ReceiveMessage(ctx, &sqs.ReceiveMessageInput{
 			QueueUrl:            aws.String(c.Config.AWS.SQS.QueueURL),
-			MaxNumberOfMessages: MaxMessages,
+			MaxNumberOfMessages: int32(c.Config.App.Threads),
 			WaitTimeSeconds:     WaitTimeSecs,
 		})
 
@@ -126,12 +126,12 @@ func (c *SQSEmailConsumer) processMessage(ctx context.Context,
 
 	}
 
-	var m mailserver.MailItem
+	var m email.MailItem
 	if err := json.Unmarshal([]byte(*message.Body), &m); err != nil {
 		return fmt.Errorf("decode message %s: %w", messageID, err)
 	}
 
-	if err := c.EmailHandler.SendEmail(&m); err != nil {
+	if err := c.EmailHandler.SendMail(&m); err != nil {
 		return fmt.Errorf("send message %s: %w", messageID, err)
 	}
 

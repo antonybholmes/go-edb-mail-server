@@ -43,6 +43,7 @@ type (
 
 const (
 	JwtParam           = "jwt"
+	TestTemplateFile   = "templates/html/emails/test.html"
 	FooterTemplateFile = "templates/html/emails/footer.html"
 
 	EmailTypeVerify          = "verify"
@@ -55,6 +56,7 @@ const (
 	EmailTypeAccountCreated  = "account-created"
 	EmailTypeAccountUpdated  = "account-updated"
 	EmailTypeOTP             = "otp"
+	EmailTypeTest            = "test"
 )
 
 func NewEmailHandler(cfg *config.AppConfig) *EmailHandler {
@@ -228,17 +230,7 @@ func (h *EmailHandler) SendEmailWithToken(subject string,
 		return err
 	}
 
-	var firstName string = ""
-
-	if m.Name != "" {
-		firstName = m.Name
-	} else {
-		firstName = strings.Split(address.Address, "@")[0]
-		c := cases.Title(language.English)
-		firstName = c.String(firstName)
-	}
-
-	firstName = strings.Split(firstName, " ")[0]
+	firstName := GetFirstNameFromMailItem(m)
 
 	link := ""
 
@@ -339,6 +331,50 @@ func (h *EmailHandler) SendEmailWithToken(subject string,
 	return nil
 }
 
+func (h *EmailHandler) SendTestEmail(
+	m *email.MailItem) error {
+
+	address, err := mail.ParseAddress(m.To)
+
+	if err != nil {
+		return err
+	}
+
+	var body bytes.Buffer
+
+	// All templates are called layout
+	t, err := htmltemplate.ParseFiles(TestTemplateFile, FooterTemplateFile)
+
+	if err != nil {
+		return err
+	}
+
+	firstName := GetFirstNameFromMailItem(m)
+
+	emailBody := EmailBody{
+		Name:       firstName,
+		DoNotReply: h.Config.App.DoNotReply,
+	}
+
+	err = t.ExecuteTemplate(&body, "layout", emailBody)
+
+	if err != nil {
+		return err
+	}
+
+	//log.Debug().Msgf("email %v %v %v", address, subject, body.String())
+
+	err = h.Mailer.SendHtmlMail(context.Background(), address, "System Test Email", body.String())
+
+	if err != nil {
+		return err
+	}
+
+	log.Info().Msgf("%s email sent to %s", m.EmailType, address.Address)
+
+	return nil
+}
+
 func (h *EmailHandler) SendEmail(m *email.MailItem) error {
 
 	switch m.EmailType {
@@ -362,9 +398,38 @@ func (h *EmailHandler) SendEmail(m *email.MailItem) error {
 		return h.SendAccountUpdatedEmail(m)
 	case EmailTypeOTP:
 		return h.SendOTPEmail(m)
+	case EmailTypeTest:
+		return h.SendTestEmail(m)
 	default:
 		log.Debug().Msgf("invalid email type: %s", m.EmailType)
 		return fmt.Errorf("unsupported email type %q", m.EmailType)
 	}
 
+}
+
+func GetNameFromMailItem(m *email.MailItem) string {
+	var name string = ""
+
+	if m.Name != "" {
+		name = m.Name
+	} else {
+		// Guess the first name from the email address.
+		name = strings.Split(m.From, "@")[0]
+
+		name = strings.ReplaceAll(name, ".", " ")
+
+		c := cases.Title(language.English)
+		name = c.String(name)
+	}
+
+	return name
+}
+
+func GetFirstNameFromMailItem(m *email.MailItem) string {
+	var name string = GetNameFromMailItem(m)
+
+	// Use only the first word of the name if there are still spaces
+	name = strings.Split(name, " ")[0]
+
+	return name
 }

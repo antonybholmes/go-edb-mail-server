@@ -24,6 +24,7 @@ type AppConfig struct {
 		From       string          `yaml:"from"`
 		DoNotReply string          `yaml:"doNotReply"`
 		Version    sys.VersionInfo `yaml:"-"`
+		Threads    int             `yaml:"threads"`
 	} `yaml:"app"`
 }
 

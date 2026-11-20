@@ -48,7 +48,7 @@ func main() {
 	//env.Load("version.env")
 
 	// make a thread pool
-	pool := sys.Must(ants.NewPool(10))
+	pool := sys.Must(ants.NewPool(cfg.App.Threads))
 
 	defer pool.Release()
 
