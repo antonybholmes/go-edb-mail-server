@@ -4,15 +4,38 @@ import (
 	"context"
 	"encoding/json"
 
-	"github.com/antonybholmes/go-edbmailserver/consts"
-	edbmail "github.com/antonybholmes/go-edbmailserver/mail"
-	mailserver "github.com/antonybholmes/go-mailserver"
+	"github.com/antonybholmes/go-edb-mail-server/config"
+	"github.com/antonybholmes/go-sys"
+
+	mailserver "github.com/antonybholmes/go-edb-mail-server/mail"
+
+	email "github.com/antonybholmes/go-mail"
 	"github.com/antonybholmes/go-sys/log"
 	"github.com/panjf2000/ants"
 	"github.com/redis/go-redis/v9"
 )
 
-func ConsumeRedis(pool *ants.Pool) {
+type (
+	ValkeyHandler struct {
+		Config       *config.AppConfig
+		EmailHandler *mailserver.EmailHandler
+		pool         *ants.Pool
+		backoff      *sys.Backoff
+	}
+)
+
+func NewValkeyHandler(config *config.AppConfig,
+	emailHandler *mailserver.EmailHandler,
+	pool *ants.Pool) *ValkeyHandler {
+	return &ValkeyHandler{
+		Config:       config,
+		EmailHandler: emailHandler,
+		pool:         pool,
+		backoff:      sys.NewDefaultBackoff(),
+	}
+}
+
+func (h *ValkeyHandler) Consume() {
 	//env.Reload()
 	//env.Load("consts.env")
 	//env.Load("version.env")
@@ -20,15 +43,15 @@ func ConsumeRedis(pool *ants.Pool) {
 	var ctx = context.Background()
 
 	var rdb = redis.NewClient(&redis.Options{
-		Addr:     consts.RedisAddr,
+		Addr:     h.Config.Redis.Addr,
 		Username: "edb",
-		Password: consts.RedisPassword, // no password set
-		DB:       0,                    // use default DB
+		Password: h.Config.Redis.Password, // no password set
+		DB:       0,                       // use default DB
 	})
 
-	log.Debug().Msgf("%s %s", consts.AppId, consts.RedisAddr)
+	log.Debug().Msgf("%s %s", config.AppId, h.Config.Redis.Addr)
 
-	subscriber := rdb.Subscribe(ctx, mailserver.EmailQueueChannel)
+	subscriber := rdb.Subscribe(ctx, email.EmailQueueChannel)
 
 	for {
 		msg, err := subscriber.ReceiveMessage(ctx)
@@ -37,8 +60,8 @@ func ConsumeRedis(pool *ants.Pool) {
 			panic(err)
 		}
 
-		err = pool.Submit(func() {
-			err := processMessage(msg)
+		err = h.pool.Submit(func() {
+			err := h.processMessages(msg)
 
 			if err != nil {
 				log.Debug().Msgf("error sending email: %v", err)
@@ -52,8 +75,8 @@ func ConsumeRedis(pool *ants.Pool) {
 	}
 }
 
-func processMessage(msg *redis.Message) error {
-	var m mailserver.MailItem
+func (h *ValkeyHandler) processMessages(msg *redis.Message) error {
+	var m email.MailItem
 
 	err := json.Unmarshal([]byte(msg.Payload), &m)
 
@@ -63,5 +86,5 @@ func processMessage(msg *redis.Message) error {
 
 	//log.Debug().Msgf("email %s %v", msg.Payload, qe.EmailType)
 
-	return edbmail.SendEmail(&m)
+	return h.EmailHandler.SendEmail(&m)
 }

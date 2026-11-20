@@ -2,181 +2,199 @@ package mail
 
 import (
 	"bytes"
+	"context"
 	"fmt"
-	"html/template"
+	htmltemplate "html/template"
 	"net/mail"
 	"net/url"
 	"strings"
 
-	"github.com/antonybholmes/go-edbmailserver/consts"
-	mailserver "github.com/antonybholmes/go-mailserver"
+	"github.com/antonybholmes/go-edb-mail-server/config"
+	email "github.com/antonybholmes/go-mail"
+	"github.com/antonybholmes/go-sys"
 	"github.com/antonybholmes/go-sys/log"
 
-	"github.com/antonybholmes/go-mailserver/sesmailserver"
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
 )
 
-const (
-	JwtParam       = "jwt"
-	FooterTemplate = "templates/email/footer.html"
-
-	EmailQueueTypeVerify          = "verify"
-	EmailQueueTypeVerified        = "verified"
-	EmailQueueTypePasswordless    = "passwordless"
-	EmailQueueTypePasswordReset   = "password-reset"
-	EmailQueueTypePasswordUpdated = "password-updated"
-	EmailQueueTypeEmailReset      = "email-reset"
-	EmailQueueTypeEmailUpdated    = "email-updated"
-	EmailQueueTypeAccountCreated  = "account-created"
-	EmailQueueTypeAccountUpdated  = "account-updated"
-	EmailQueueTypeOTP             = "otp"
-)
-
 //const RedirectUrlParam = "redirectUrl"
 
-type TimeSensitive struct {
-	ContentType string
-	Time        string
-}
-type EmailBody struct {
-	Name          string
-	From          string
-	TimeSensitive *TimeSensitive
-	Payload       *mailserver.Payload
-	Link          string
-	DoNotReply    string
+type (
+	TimeSensitive struct {
+		ContentType string
+		Time        string
+	}
+
+	EmailBody struct {
+		Name          string
+		From          string
+		TimeSensitive *TimeSensitive
+		Payload       *email.Payload
+		Link          string
+		DoNotReply    string
+	}
+
+	EmailHandler struct {
+		Config *config.AppConfig
+		Mailer email.Mailer
+	}
+)
+
+const (
+	JwtParam           = "jwt"
+	TestTemplateFile   = "templates/html/emails/test.html"
+	FooterTemplateFile = "templates/html/emails/footer.html"
+
+	EmailTypeVerify          = "verify"
+	EmailTypeVerified        = "verified"
+	EmailTypePasswordless    = "passwordless"
+	EmailTypePasswordReset   = "password-reset"
+	EmailTypePasswordUpdated = "password-updated"
+	EmailTypeEmailReset      = "email-reset"
+	EmailTypeEmailUpdated    = "email-updated"
+	EmailTypeAccountCreated  = "account-created"
+	EmailTypeAccountUpdated  = "account-updated"
+	EmailTypeOTP             = "otp"
+	EmailTypeTest            = "test"
+)
+
+func NewEmailHandler(cfg *config.AppConfig) *EmailHandler {
+	return &EmailHandler{
+		Config: cfg,
+		Mailer: email.NewSesMailer(sys.Must(mail.ParseAddress(cfg.App.From))),
+	}
 }
 
-func SendPasswordlessSigninEmail(mail *mailserver.MailItem) error {
+func (h *EmailHandler) SendPasswordlessSigninEmail(mail *email.MailItem) error {
 
 	var file string
 
 	if mail.Mode == "api" {
-		file = "templates/email/passwordless/api.html"
+		file = "templates/html/emails/passwordless/api.html"
 	} else {
-		file = "templates/email/passwordless/web.html"
+		file = "templates/html/emails/passwordless/web.html"
 	}
 
-	//file := "templates/email/passwordless/web.html"
+	//file := "templates/html/emails/passwordless/web.html"
 
-	return SendEmailWithToken("Passwordless Sign In",
+	return h.SendEmailWithToken("Passwordless Sign In",
 		mail,
-		consts.UrlSignIn,
+		config.UrlSignIn,
 		file)
 }
 
-func SendVerifyEmail(mail *mailserver.MailItem) error {
+func (h *EmailHandler) SendVerifyEmail(mail *email.MailItem) error {
 
 	var file string
 
 	if mail.Mode == "api" {
-		file = "templates/email/verify/api.html"
+		file = "templates/html/emails/verify/api.html"
 	} else {
-		file = "templates/email/verify/web.html"
+		file = "templates/html/emails/verify/web.html"
 	}
 
-	return SendEmailWithToken("Email Address Verification",
+	return h.SendEmailWithToken("Email Address Verification",
 		mail,
-		consts.UrlVerifyEmail,
+		config.UrlVerifyEmail,
 		file)
 }
 
-func SendVerifiedEmail(mail *mailserver.MailItem) error {
+func (h *EmailHandler) SendVerifiedEmail(mail *email.MailItem) error {
 
-	file := "templates/email/verify/verified.html"
+	file := "templates/html/emails/verify/verified.html"
 
-	return SendEmailWithToken("Email Address Verified",
+	return h.SendEmailWithToken("Email Address Verified",
 		mail,
 		"",
 		file)
 }
 
-func SendPasswordResetEmail(mail *mailserver.MailItem) error {
+func (h *EmailHandler) SendPasswordResetEmail(mail *email.MailItem) error {
 
 	var file string
 
 	if mail.LinkUrl != "" {
-		file = "templates/email/password/reset/web.html"
+		file = "templates/html/emails/password/reset/web.html"
 	} else {
-		file = "templates/email/password/reset/api.html"
+		file = "templates/html/emails/password/reset/api.html"
 	}
 
-	return SendEmailWithToken("Password Reset",
+	return h.SendEmailWithToken("Password Reset",
 		mail,
 		mail.LinkUrl,
 		file)
 }
 
-func SendPasswordUpdatedEmail(mail *mailserver.MailItem) error {
+func (h *EmailHandler) SendPasswordUpdatedEmail(mail *email.MailItem) error {
 
 	var file string
 
 	if mail.LinkUrl != "" {
-		file = "templates/email/password/switch-to-passwordless.html"
+		file = "templates/html/emails/password/switch-to-passwordless.html"
 	} else {
-		file = "templates/email/password/updated.html"
+		file = "templates/html/emails/password/updated.html"
 	}
 
-	return SendEmailWithToken("Password Updated",
+	return h.SendEmailWithToken("Password Updated",
 		mail,
 		mail.LinkUrl,
 		file)
 }
 
-func SendEmailResetEmail(mail *mailserver.MailItem) error {
+func (h *EmailHandler) SendEmailResetEmail(mail *email.MailItem) error {
 
 	var file string
 
 	if mail.LinkUrl != "" {
-		file = "templates/email/email/reset/web.html"
+		file = "templates/html/emails/email/reset/web.html"
 	} else {
-		file = "templates/email/email/reset/api.html"
+		file = "templates/html/emails/email/reset/api.html"
 	}
 
-	return SendEmailWithToken("Email Reset",
+	return h.SendEmailWithToken("Email Reset",
 		mail,
 		mail.LinkUrl,
 		file)
 }
 
-func SendEmailUpdatedEmail(mail *mailserver.MailItem) error {
+func (h *EmailHandler) SendEmailUpdatedEmail(mail *email.MailItem) error {
 
-	file := "templates/email/email/updated.html"
+	file := "templates/html/emails/email/updated.html"
 
-	return SendEmailWithToken("Email Updated",
+	return h.SendEmailWithToken("Email Updated",
 		mail,
 		mail.LinkUrl,
 		file)
 }
 
-func SendAccountCreatedEmail(mail *mailserver.MailItem) error {
+func (h *EmailHandler) SendAccountCreatedEmail(mail *email.MailItem) error {
 
-	file := "templates/email/account/created.html"
+	file := "templates/html/emails/account/created.html"
 
-	return SendEmailWithToken("Account Created",
+	return h.SendEmailWithToken("Account Created",
 		mail,
 		mail.LinkUrl,
 		file)
 }
 
-func SendAccountUpdatedEmail(mail *mailserver.MailItem) error {
+func (h *EmailHandler) SendAccountUpdatedEmail(mail *email.MailItem) error {
 
-	file := "templates/email/account/updated.html"
+	file := "templates/html/emails/account/updated.html"
 
-	return SendEmailWithToken("Account Updated",
+	return h.SendEmailWithToken("Account Updated",
 		mail,
 		mail.LinkUrl,
 		file)
 }
 
-func SendOTPEmail(mail *mailserver.MailItem) error {
+func (h *EmailHandler) SendOTPEmail(mail *email.MailItem) error {
 
-	file := "templates/email/otp/otp.html"
+	file := "templates/html/emails/otp/otp.html"
 
 	//log.Debug().Msgf("send totp email to %s", mail.To)
 
-	err := SendEmailWithToken(fmt.Sprintf("%s One-Time Passcode", consts.ProductName),
+	err := h.SendEmailWithToken(fmt.Sprintf("%s One-Time Passcode", config.AppName),
 		mail,
 		"",
 		file)
@@ -188,8 +206,8 @@ func SendOTPEmail(mail *mailserver.MailItem) error {
 	return err
 }
 
-func SendEmailWithToken(subject string,
-	m *mailserver.MailItem,
+func (h *EmailHandler) SendEmailWithToken(subject string,
+	m *email.MailItem,
 	linkUrl string,
 	file string) error {
 
@@ -205,23 +223,14 @@ func SendEmailWithToken(subject string,
 
 	var body bytes.Buffer
 
-	t, err := template.ParseFiles(file, FooterTemplate)
+	// All templates are called layout
+	t, err := htmltemplate.ParseFiles(file, FooterTemplateFile)
 
 	if err != nil {
 		return err
 	}
 
-	var firstName string = ""
-
-	if m.Name != "" {
-		firstName = m.Name
-	} else {
-		firstName = strings.Split(address.Address, "@")[0]
-		c := cases.Title(language.English)
-		firstName = c.String(firstName)
-	}
-
-	firstName = strings.Split(firstName, " ")[0]
+	firstName := GetFirstNameFromMailItem(m)
 
 	link := ""
 
@@ -280,8 +289,8 @@ func SendEmailWithToken(subject string,
 		Name:       firstName,
 		Payload:    m.Payload,
 		Link:       link,
-		From:       consts.AppName,
-		DoNotReply: consts.TextDoNotReply,
+		From:       m.From,
+		DoNotReply: h.Config.App.DoNotReply,
 	}
 
 	if m.TTL != "" {
@@ -311,7 +320,7 @@ func SendEmailWithToken(subject string,
 
 	//log.Debug().Msgf("email %v %v %v", address, subject, body.String())
 
-	err = sesmailserver.SendHtmlMail(address, subject, body.String())
+	err = h.Mailer.SendHtmlMail(context.Background(), address, subject, body.String())
 
 	if err != nil {
 		return err
@@ -322,34 +331,105 @@ func SendEmailWithToken(subject string,
 	return nil
 }
 
-func SendEmail(m *mailserver.MailItem) error {
+func (h *EmailHandler) SendTestEmail(
+	m *email.MailItem) error {
 
-	//log.Debug().Msgf("send email %s %s", m.To, m.EmailType)
+	address, err := mail.ParseAddress(m.To)
 
-	switch m.EmailType {
-	case EmailQueueTypeVerify:
-		return SendVerifyEmail(m)
-	case EmailQueueTypeVerified:
-		return SendVerifiedEmail(m)
-	case EmailQueueTypePasswordless:
-		return SendPasswordlessSigninEmail(m)
-	case EmailQueueTypePasswordReset:
-		return SendPasswordResetEmail(m)
-	case EmailQueueTypePasswordUpdated:
-		return SendPasswordUpdatedEmail(m)
-	case EmailQueueTypeEmailReset:
-		return SendEmailResetEmail(m)
-	case EmailQueueTypeEmailUpdated:
-		return SendEmailUpdatedEmail(m)
-	case EmailQueueTypeAccountCreated:
-		return SendAccountCreatedEmail(m)
-	case EmailQueueTypeAccountUpdated:
-		return SendAccountUpdatedEmail(m)
-	case EmailQueueTypeOTP:
-		return SendOTPEmail(m)
-	default:
-		log.Debug().Msgf("invalid email type: %s", m.EmailType)
+	if err != nil {
+		return err
 	}
 
+	var body bytes.Buffer
+
+	// All templates are called layout
+	t, err := htmltemplate.ParseFiles(TestTemplateFile, FooterTemplateFile)
+
+	if err != nil {
+		return err
+	}
+
+	firstName := GetFirstNameFromMailItem(m)
+
+	emailBody := EmailBody{
+		Name:       firstName,
+		DoNotReply: h.Config.App.DoNotReply,
+	}
+
+	err = t.ExecuteTemplate(&body, "layout", emailBody)
+
+	if err != nil {
+		return err
+	}
+
+	//log.Debug().Msgf("email %v %v %v", address, subject, body.String())
+
+	err = h.Mailer.SendHtmlMail(context.Background(), address, "System Test Email", body.String())
+
+	if err != nil {
+		return err
+	}
+
+	log.Info().Msgf("%s email sent to %s", m.EmailType, address.Address)
+
 	return nil
+}
+
+func (h *EmailHandler) SendEmail(m *email.MailItem) error {
+
+	switch m.EmailType {
+	case EmailTypeVerify:
+		return h.SendVerifyEmail(m)
+	case EmailTypeVerified:
+		return h.SendVerifiedEmail(m)
+	case EmailTypePasswordless:
+		return h.SendPasswordlessSigninEmail(m)
+	case EmailTypePasswordReset:
+		return h.SendPasswordResetEmail(m)
+	case EmailTypePasswordUpdated:
+		return h.SendPasswordUpdatedEmail(m)
+	case EmailTypeEmailReset:
+		return h.SendEmailResetEmail(m)
+	case EmailTypeEmailUpdated:
+		return h.SendEmailUpdatedEmail(m)
+	case EmailTypeAccountCreated:
+		return h.SendAccountCreatedEmail(m)
+	case EmailTypeAccountUpdated:
+		return h.SendAccountUpdatedEmail(m)
+	case EmailTypeOTP:
+		return h.SendOTPEmail(m)
+	case EmailTypeTest:
+		return h.SendTestEmail(m)
+	default:
+		log.Debug().Msgf("invalid email type: %s", m.EmailType)
+		return fmt.Errorf("unsupported email type %q", m.EmailType)
+	}
+
+}
+
+func GetNameFromMailItem(m *email.MailItem) string {
+	var name string = ""
+
+	if m.Name != "" {
+		name = m.Name
+	} else {
+		// Guess the first name from the email address.
+		name = strings.Split(m.From, "@")[0]
+
+		name = strings.ReplaceAll(name, ".", " ")
+
+		c := cases.Title(language.English)
+		name = c.String(name)
+	}
+
+	return name
+}
+
+func GetFirstNameFromMailItem(m *email.MailItem) string {
+	var name string = GetNameFromMailItem(m)
+
+	// Use only the first word of the name if there are still spaces
+	name = strings.Split(name, " ")[0]
+
+	return name
 }

@@ -1,19 +1,20 @@
-module github.com/antonybholmes/go-edbmailserver
+module github.com/antonybholmes/go-edb-mail-server
 
-go 1.27
+go 1.27.4
 
-// replace github.com/antonybholmes/go-mailserver => ../go-mailserver
+replace github.com/antonybholmes/go-mail => ../go-mail
 
 // replace github.com/antonybholmes/go-sys => ../go-sys
 
 require (
-	github.com/antonybholmes/go-mailserver v0.0.0-20261111175659-f8a87cede7a2
+	github.com/antonybholmes/go-mail v0.0.0-20261111175659-f8a87cede7a2
 	github.com/antonybholmes/go-sys v0.0.0-20261112231824-277e38ba69f2
 	github.com/aws/aws-sdk-go-v2 v1.48.0
 	github.com/aws/aws-sdk-go-v2/config v1.33.18
 	github.com/aws/aws-sdk-go-v2/service/sqs v1.53.0
 	github.com/panjf2000/ants v1.3.0
 	github.com/redis/go-redis/v9 v9.23.0
+	go.yaml.in/yaml/v4 v4.0.0
 	golang.org/x/text v0.44.0
 )
 

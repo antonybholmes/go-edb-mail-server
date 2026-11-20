@@ -1,11 +1,10 @@
 package main
 
 import (
-	"net/mail"
+	"context"
 
-	"github.com/antonybholmes/go-edbmailserver/consts"
-
-	"github.com/antonybholmes/go-mailserver/sesmailserver"
+	"github.com/antonybholmes/go-edb-mail-server/config"
+	email "github.com/antonybholmes/go-edb-mail-server/mail"
 	"github.com/antonybholmes/go-sys"
 	"github.com/antonybholmes/go-sys/env"
 	"github.com/antonybholmes/go-sys/log"
@@ -36,71 +35,29 @@ import (
 // 	log.Logger = logger
 // }
 
-func init() {
-	log.SetAppName(consts.AppId)
+func main() {
+	cfg := config.Instance()
+
+	log.SetAppName(config.AppId)
 	//initLogger()
 
 	env.Ls()
 
-	from := sys.Must(mail.ParseAddress(consts.EmailFrom))
-
-	sesmailserver.InitSesMailer(from)
-}
-
-func main() {
 	//env.Reload()
 	//env.Load("consts.env")
 	//env.Load("version.env")
 
 	// make a thread pool
-	pool := sys.Must(ants.NewPool(10))
+	pool := sys.Must(ants.NewPool(cfg.App.Threads))
 
 	defer pool.Release()
 
-	log.Debug().Msgf("%s %s", consts.AppId, consts.Version)
+	ctx := context.Background()
 
-	consumer := NewSQSConsumer(pool)
+	emailHandler := email.NewEmailHandler(cfg)
+	var consumer QueueProcessor = NewSQSEmailConsumer(cfg, emailHandler, pool)
 
 	//ConsumeRedis(pool)
-	consumer.ConsumeSQS()
+	consumer.Consume(ctx)
 	//consumeKafka(pool)
 }
-
-// func consumeKafka(pool *ants.Pool) {
-
-// 	var ctx = context.Background()
-
-// 	r := kafka.NewReader(kafka.ReaderConfig{
-// 		Brokers:   []string{"localhost:9094"}, // Kafka broker
-// 		Topic:     mailserver.QUEUE_EMAIL_CHANNEL, // Topic name
-// 		Partition: 0,
-// 		MaxBytes:  10e6, // 10MB
-// 	})
-
-// 	defer r.Close()
-
-// 	var qe mailserver.QueueEmail
-
-// 	for {
-// 		m, err := r.ReadMessage(ctx)
-
-// 		if err != nil {
-// 			fmt.Printf("%s", err)
-// 			break
-// 		}
-
-// 		fmt.Printf("message at offset %d: %s = %s\n", m.Offset, string(m.Key), string(m.Value))
-
-// 		err = json.Unmarshal([]byte(m.Value), &qe)
-
-// 		if err != nil {
-// 			log.Debug().Msgf("email error")
-// 		}
-
-// 		sendEmail(&qe, pool)
-// 	}
-// }
-
-// func sendEmailUsingPool(m *mailserver.MailItem, pool *ants.Pool) {
-// 	pool.Submit(func() { sendEmail(m) })
-// }
