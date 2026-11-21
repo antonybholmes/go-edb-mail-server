@@ -38,24 +38,14 @@ type (
 		Config *config.AppConfig
 		Mailer email.Mailer
 	}
+
+	EmailType string
 )
 
 const (
 	JwtParam           = "jwt"
 	TestTemplateFile   = "templates/html/emails/test.html"
 	FooterTemplateFile = "templates/html/emails/footer.html"
-
-	EmailTypeVerify          = "verify"
-	EmailTypeVerified        = "verified"
-	EmailTypePasswordless    = "passwordless"
-	EmailTypePasswordReset   = "password-reset"
-	EmailTypePasswordUpdated = "password-updated"
-	EmailTypeEmailReset      = "email-reset"
-	EmailTypeEmailUpdated    = "email-updated"
-	EmailTypeAccountCreated  = "account-created"
-	EmailTypeAccountUpdated  = "account-updated"
-	EmailTypeOTP             = "otp"
-	EmailTypeTest            = "test"
 )
 
 func NewEmailHandler(cfg *config.AppConfig) email.MailQueue {
@@ -346,27 +336,27 @@ func (h *EmailHandler) SendTestEmail(
 func (h *EmailHandler) SendMail(m *email.MailItem) error {
 
 	switch m.EmailType {
-	case EmailTypeVerify:
+	case email.EmailTypeVerify:
 		return h.SendVerifyEmail(m)
-	case EmailTypeVerified:
+	case email.EmailTypeVerified:
 		return h.SendVerifiedEmail(m)
-	case EmailTypePasswordless:
+	case email.EmailTypePasswordless:
 		return h.SendPasswordlessSigninEmail(m)
-	case EmailTypePasswordReset:
+	case email.EmailTypePasswordReset:
 		return h.SendPasswordResetEmail(m)
-	case EmailTypePasswordUpdated:
+	case email.EmailTypePasswordUpdated:
 		return h.SendPasswordUpdatedEmail(m)
-	case EmailTypeEmailReset:
+	case email.EmailTypeEmailReset:
 		return h.SendEmailResetEmail(m)
-	case EmailTypeEmailUpdated:
+	case email.EmailTypeEmailUpdated:
 		return h.SendEmailUpdatedEmail(m)
-	case EmailTypeAccountCreated:
+	case email.EmailTypeAccountCreated:
 		return h.SendAccountCreatedEmail(m)
-	case EmailTypeAccountUpdated:
+	case email.EmailTypeAccountUpdated:
 		return h.SendAccountUpdatedEmail(m)
-	case EmailTypeOTP:
+	case email.EmailTypeOTP:
 		return h.SendOTPEmail(m)
-	case EmailTypeTest:
+	case email.EmailTypeTest:
 		return h.SendTestEmail(m)
 	default:
 		log.Debug().Msgf("invalid email type: %s", m.EmailType)
