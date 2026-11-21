@@ -6,18 +6,20 @@ replace github.com/antonybholmes/go-mail => ../go-mail
 
 replace github.com/antonybholmes/go-sys => ../go-sys
 
+replace github.com/antonybholmes/go-jobs => ../go-jobs
+
 require (
-	github.com/antonybholmes/go-mail v0.0.0-20261111175659-f8a87cede7a2
+	github.com/antonybholmes/go-jobs v0.0.0-00010101000000-000000000000
+	github.com/antonybholmes/go-mail v0.0.0-20261120230506-649df8ca9051
 	github.com/antonybholmes/go-sys v0.0.0-20261118211639-408b038a66d6
-	github.com/panjf2000/ants v1.3.0
 	go.yaml.in/yaml/v4 v4.0.0
 	golang.org/x/text v0.44.0
 )
 
 require (
 	github.com/aws/aws-sdk-go-v2 v1.48.0 // indirect
-	github.com/aws/aws-sdk-go-v2/config v1.33.18 // indirect
-	github.com/aws/aws-sdk-go-v2/credentials v1.21.0 // indirect
+	github.com/aws/aws-sdk-go-v2/config v1.33.21 // indirect
+	github.com/aws/aws-sdk-go-v2/credentials v1.21.3 // indirect
 	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.20.9 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/configsources v1.5.12 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.8.12 // indirect
@@ -25,11 +27,11 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.13.25 // indirect
 	github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.14.12 // indirect
 	github.com/aws/aws-sdk-go-v2/service/sesv2 v1.79.9 // indirect
-	github.com/aws/aws-sdk-go-v2/service/signin v1.13.1 // indirect
+	github.com/aws/aws-sdk-go-v2/service/signin v1.14.0 // indirect
 	github.com/aws/aws-sdk-go-v2/service/sqs v1.53.0 // indirect
 	github.com/aws/aws-sdk-go-v2/service/sso v1.39.5 // indirect
 	github.com/aws/aws-sdk-go-v2/service/ssooidc v1.44.5 // indirect
-	github.com/aws/aws-sdk-go-v2/service/sts v1.52.0 // indirect
+	github.com/aws/aws-sdk-go-v2/service/sts v1.53.0 // indirect
 	github.com/aws/smithy-go v1.28.9 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/joho/godotenv v1.5.1 // indirect
@@ -37,6 +39,7 @@ require (
 	github.com/matoous/go-nanoid/v2 v2.1.0 // indirect
 	github.com/mattn/go-colorable v0.1.16 // indirect
 	github.com/mattn/go-isatty v0.0.24 // indirect
+	github.com/panjf2000/ants v1.3.0 // indirect
 	github.com/pierrec/lz4/v4 v4.1.33 // indirect
 	github.com/redis/go-redis/v9 v9.23.0 // indirect
 	github.com/richardlehane/mscfb v1.0.9 // indirect

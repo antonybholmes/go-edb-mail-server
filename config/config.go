@@ -15,19 +15,20 @@ type AppConfig struct {
 		Addr     string `yaml:"-"`
 		Password string `yaml:"-"`
 	} `yaml:"-"`
-	AWS struct {
-		SQS struct {
-			QueueURL string `yaml:"-"`
-		}
-	} `yaml:"-"`
 	App struct {
 		Email struct {
 			From string `yaml:"from"`
 		} `yaml:"email"`
 		DoNotReply string          `yaml:"doNotReply"`
 		Version    sys.VersionInfo `yaml:"-"`
-		Threads    int             `yaml:"threads"`
 	} `yaml:"app"`
+	AWS struct {
+		SQS struct {
+			QueueURL     string `yaml:"-"`
+			Threads      int    `yaml:"threads"`
+			WaitTimeSecs int    `yaml:"waitTimeSecs"`
+		} `yaml:"sqs"`
+	} `yaml:"aws"`
 }
 
 const (

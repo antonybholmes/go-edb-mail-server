@@ -4,12 +4,11 @@ import (
 	"context"
 
 	"github.com/antonybholmes/go-edb-mail-server/config"
+	awsjobs "github.com/antonybholmes/go-jobs/aws"
 	email "github.com/antonybholmes/go-mail"
 	awsmail "github.com/antonybholmes/go-mail/aws"
-	"github.com/antonybholmes/go-sys"
 	"github.com/antonybholmes/go-sys/env"
 	"github.com/antonybholmes/go-sys/log"
-	"github.com/panjf2000/ants"
 )
 
 // func initLogger() {
@@ -48,19 +47,24 @@ func main() {
 	//env.Load("consts.env")
 	//env.Load("version.env")
 
-	// make a thread pool
-	pool := sys.Must(ants.NewPool(cfg.App.Threads))
-
-	defer pool.Release()
-
 	ctx := context.Background()
 
-	emailHandler := NewEmailHandler(cfg)
+	emailHandler, err := NewEmailHandler(cfg)
+	if err != nil {
+		log.Fatal().Err(err).Msg("Failed to create email handler")
+	}
 
-	var consumer email.QueueProcessor = awsmail.NewSQSEmailConsumer(cfg.AWS.SQS.QueueURL,
-		cfg.App.Threads,
+	emailConsumer, err := awsjobs.NewSQSConsumer(cfg.AWS.SQS.QueueURL,
+		cfg.AWS.SQS.Threads,
+		cfg.AWS.SQS.WaitTimeSecs)
+
+	if err != nil {
+		log.Fatal().Err(err).Msg("Failed to create email consumer")
+	}
+
+	var consumer email.QueueConsumer = awsmail.NewSQSEmailConsumer(emailConsumer,
 		emailHandler,
-		pool)
+	)
 
 	//ConsumeRedis(pool)
 	consumer.Consume(ctx)

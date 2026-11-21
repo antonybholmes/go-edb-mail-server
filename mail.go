@@ -10,10 +10,10 @@ import (
 	"strings"
 
 	"github.com/antonybholmes/go-edb-mail-server/config"
+	"github.com/antonybholmes/go-jobs"
 	email "github.com/antonybholmes/go-mail"
 	awsmail "github.com/antonybholmes/go-mail/aws"
-	"github.com/antonybholmes/go-sys"
-	"github.com/antonybholmes/go-sys/jobs"
+
 	"github.com/antonybholmes/go-sys/log"
 
 	"golang.org/x/text/cases"
@@ -50,11 +50,22 @@ const (
 	FooterTemplateFile = "templates/html/emails/footer.html"
 )
 
-func NewEmailHandler(cfg *config.AppConfig) email.MailQueue {
+func NewEmailHandler(cfg *config.AppConfig) (*EmailHandler, error) {
+	address, err := mail.ParseAddress(cfg.App.Email.From)
+
+	if err != nil {
+		return nil, fmt.Errorf("invalid from address: %w", err)
+	}
+
+	mailer, err := awsmail.NewSESMailer(address)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create SES mailer: %w", err)
+	}
+
 	return &EmailHandler{
 		Config: cfg,
-		Mailer: awsmail.NewSESMailer(sys.Must(mail.ParseAddress(cfg.App.From))),
-	}
+		Mailer: mailer,
+	}, nil
 }
 
 func (h *EmailHandler) SendPasswordlessSigninEmail(mail *email.MailItem) error {
@@ -392,7 +403,7 @@ func (h *EmailHandler) SendTestEmail(
 	return nil
 }
 
-func (h *EmailHandler) SendMail(m *email.MailItem) error {
+func (h *EmailHandler) SendMail(cts context.Context, m *email.MailItem) error {
 
 	switch m.EmailType {
 	case email.EmailTypeVerify:
