@@ -4,11 +4,13 @@ import (
 	"context"
 
 	"github.com/antonybholmes/go-edb-mail-server/config"
-	awsjobs "github.com/antonybholmes/go-jobs/aws"
+	jobsaws "github.com/antonybholmes/go-jobs/aws"
 	email "github.com/antonybholmes/go-mail"
 	awsmail "github.com/antonybholmes/go-mail/aws"
 	"github.com/antonybholmes/go-sys/env"
 	"github.com/antonybholmes/go-sys/log"
+	awsconfig "github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/service/sqs"
 )
 
 // func initLogger() {
@@ -36,7 +38,7 @@ import (
 // }
 
 func main() {
-	cfg := config.Instance()
+	appconfig := config.Instance()
 
 	log.SetAppName(config.AppId)
 	//initLogger()
@@ -49,20 +51,29 @@ func main() {
 
 	ctx := context.Background()
 
-	emailHandler, err := NewEmailHandler(cfg)
+	cfg, err := awsconfig.LoadDefaultConfig(context.Background())
+
+	if err != nil {
+		log.Fatal().Err(err).Msg("Failed to load AWS config")
+	}
+
+	client := sqs.NewFromConfig(cfg)
+
+	emailHandler, err := NewEmailHandler(appconfig)
 	if err != nil {
 		log.Fatal().Err(err).Msg("Failed to create email handler")
 	}
 
-	emailConsumer, err := awsjobs.NewSQSConsumer(cfg.AWS.SQS.QueueURL,
-		cfg.AWS.SQS.Threads,
-		cfg.AWS.SQS.WaitTimeSecs)
+	sqsConsumer, err := jobsaws.NewSQSConsumer(appconfig.AWS.SQS.QueueURL,
+		appconfig.AWS.SQS.Threads,
+		appconfig.AWS.SQS.WaitTimeSecs,
+		client)
 
 	if err != nil {
 		log.Fatal().Err(err).Msg("Failed to create email consumer")
 	}
 
-	var consumer email.QueueConsumer = awsmail.NewSQSEmailConsumer(emailConsumer,
+	var consumer email.QueueConsumer = awsmail.NewSQSEmailConsumer(sqsConsumer,
 		emailHandler,
 	)
 
