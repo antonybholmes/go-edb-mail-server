@@ -10,7 +10,6 @@ require (
 	github.com/antonybholmes/go-mail v0.0.0-20261111175659-f8a87cede7a2
 	github.com/antonybholmes/go-sys v0.0.0-20261118211639-408b038a66d6
 	github.com/panjf2000/ants v1.3.0
-	github.com/redis/go-redis/v9 v9.23.0
 	go.yaml.in/yaml/v4 v4.0.0
 	golang.org/x/text v0.44.0
 )
@@ -39,6 +38,7 @@ require (
 	github.com/mattn/go-colorable v0.1.16 // indirect
 	github.com/mattn/go-isatty v0.0.24 // indirect
 	github.com/pierrec/lz4/v4 v4.1.33 // indirect
+	github.com/redis/go-redis/v9 v9.23.0 // indirect
 	github.com/richardlehane/mscfb v1.0.9 // indirect
 	github.com/richardlehane/msoleps v1.0.6 // indirect
 	github.com/rs/zerolog v1.35.1 // indirect
