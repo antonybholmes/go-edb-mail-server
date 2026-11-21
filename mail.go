@@ -13,6 +13,7 @@ import (
 	email "github.com/antonybholmes/go-mail"
 	awsmail "github.com/antonybholmes/go-mail/aws"
 	"github.com/antonybholmes/go-sys"
+	"github.com/antonybholmes/go-sys/jobs"
 	"github.com/antonybholmes/go-sys/log"
 
 	"golang.org/x/text/cases"
@@ -32,6 +33,7 @@ type (
 		Payload       *email.Payload
 		Link          string
 		DoNotReply    string
+		Job           *jobs.BaseJob
 	}
 
 	EmailHandler struct {
@@ -187,10 +189,19 @@ func (h *EmailHandler) SendOTPEmail(mail *email.MailItem) error {
 	return err
 }
 
+func (h *EmailHandler) SendJobSubmittedEmail(mail *email.MailItem) error {
+
+	file := "templates/html/emails/jobs/submitted.html"
+
+	return h.SendJobEmail("Job Submitted",
+		mail,
+		file)
+}
+
 func (h *EmailHandler) SendEmailWithToken(subject string,
 	m *email.MailItem,
 	linkUrl string,
-	file string) error {
+	templateFile string) error {
 
 	address, err := mail.ParseAddress(m.To)
 
@@ -201,7 +212,7 @@ func (h *EmailHandler) SendEmailWithToken(subject string,
 	var body bytes.Buffer
 
 	// All templates are called layout
-	t, err := htmltemplate.ParseFiles(file, FooterTemplateFile)
+	t, err := htmltemplate.ParseFiles(templateFile, FooterTemplateFile)
 
 	if err != nil {
 		return err
@@ -265,6 +276,54 @@ func (h *EmailHandler) SendEmailWithToken(subject string,
 			ContentType: contentType,
 			Time:        m.TTL,
 		}
+	}
+
+	err = t.ExecuteTemplate(&body, "layout", emailBody)
+
+	if err != nil {
+		return err
+	}
+
+	err = h.Mailer.SendHtmlMail(context.Background(),
+		address,
+		subject,
+		body.String())
+
+	if err != nil {
+		return err
+	}
+
+	log.Info().Msgf("%s email sent to %s", m.EmailType, address.Address)
+
+	return nil
+}
+
+func (h *EmailHandler) SendJobEmail(subject string,
+	m *email.MailItem,
+	templateFile string) error {
+
+	address, err := mail.ParseAddress(m.To)
+
+	if err != nil {
+		return err
+	}
+
+	var body bytes.Buffer
+
+	// All templates are called layout
+	t, err := htmltemplate.ParseFiles(templateFile, FooterTemplateFile)
+
+	if err != nil {
+		return err
+	}
+
+	firstName := GetFirstNameFromMailItem(m)
+
+	emailBody := EmailBody{
+		Name:       firstName,
+		Job:        m.Job,
+		From:       m.From,
+		DoNotReply: h.Config.App.DoNotReply,
 	}
 
 	err = t.ExecuteTemplate(&body, "layout", emailBody)
@@ -356,6 +415,8 @@ func (h *EmailHandler) SendMail(m *email.MailItem) error {
 		return h.SendAccountUpdatedEmail(m)
 	case email.EmailTypeOTP:
 		return h.SendOTPEmail(m)
+	case email.EmailTypeJobSubmitted:
+		return h.SendJobSubmittedEmail(m)
 	case email.EmailTypeTest:
 		return h.SendTestEmail(m)
 	default:
