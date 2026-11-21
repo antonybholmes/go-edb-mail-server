@@ -21,7 +21,9 @@ type AppConfig struct {
 		}
 	} `yaml:"-"`
 	App struct {
-		From       string          `yaml:"from"`
+		Email struct {
+			From string `yaml:"from"`
+		} `yaml:"email"`
 		DoNotReply string          `yaml:"doNotReply"`
 		Version    sys.VersionInfo `yaml:"-"`
 		Threads    int             `yaml:"threads"`

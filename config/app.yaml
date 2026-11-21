@@ -1,4 +1,5 @@
 app:
-  from: "Experiments Team <donotreply@rdf-lab.org>"
+  email:
+    from: "Experiments Team <donotreply@rdf-lab.org>"
   doNotReply: "Please do not reply to this email as we are not able to respond to messages sent to this address."
   threads: 5
