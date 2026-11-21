@@ -75,8 +75,6 @@ func (h *EmailHandler) SendPasswordlessSigninEmail(mail *email.MailItem) error {
 		file = "templates/html/emails/passwordless/web.html"
 	}
 
-	//file := "templates/html/emails/passwordless/web.html"
-
 	return h.SendEmailWithToken("Passwordless Sign In",
 		mail,
 		config.UrlSignIn,
@@ -191,16 +189,10 @@ func (h *EmailHandler) SendOTPEmail(mail *email.MailItem) error {
 
 	file := "templates/html/emails/otp/otp.html"
 
-	//log.Debug().Msgf("send totp email to %s", mail.To)
-
 	err := h.SendEmailWithToken(fmt.Sprintf("%s One-Time Passcode", config.AppName),
 		mail,
 		"",
 		file)
-
-	// if err != nil {
-	// 	log.Debug().Msgf("error sending totp email to %s: %v", mail.To, err)
-	// }
 
 	return err
 }
@@ -209,10 +201,6 @@ func (h *EmailHandler) SendEmailWithToken(subject string,
 	m *email.MailItem,
 	linkUrl string,
 	file string) error {
-
-	//baseName := filepath.Base(file)
-
-	//log.Debug().Msgf("send email %s to %s using %s", subject, m.To, baseName)
 
 	address, err := mail.ParseAddress(m.To)
 
@@ -250,16 +238,6 @@ func (h *EmailHandler) SendEmailWithToken(subject string,
 			return err
 		}
 
-		// after the callback url does some validation, we can
-		// goto a different url to make the user experience
-		// better
-		// this feature is mostly unused since the visit url
-		// is normally encoded in the attached jwt to prevent
-		// tampering
-		//if qe.RedirectUrl != "" {
-		//	params.Set(REDIRECT_URL_PARAM, qe.RedirectUrl)
-		//}
-
 		if m.Payload != nil && m.Payload.DataType == "jwt" {
 			params.Set(JwtParam, m.Payload.Data)
 		}
@@ -270,18 +248,6 @@ func (h *EmailHandler) SendEmailWithToken(subject string,
 
 		// the complete url with params
 		link = parsedUrl.String()
-
-		// err = t.Execute(&body, EmailBody{
-		// 	Name:       firstName,
-		// 	Link:       link,
-		// 	From:       consts.NAME,
-		// 	Time:       m.TTL,
-		// 	DoNotReply: consts.DO_NOT_REPLY,
-		// })
-
-		// if err != nil {
-		// 	return err
-		// }
 	}
 
 	emailBody := EmailBody{
@@ -317,9 +283,10 @@ func (h *EmailHandler) SendEmailWithToken(subject string,
 		return err
 	}
 
-	//log.Debug().Msgf("email %v %v %v", address, subject, body.String())
-
-	err = h.Mailer.SendHtmlMail(context.Background(), address, subject, body.String())
+	err = h.Mailer.SendHtmlMail(context.Background(),
+		address,
+		subject,
+		body.String())
 
 	if err != nil {
 		return err
@@ -342,7 +309,8 @@ func (h *EmailHandler) SendTestEmail(
 	var body bytes.Buffer
 
 	// All templates are called layout
-	t, err := htmltemplate.ParseFiles(TestTemplateFile, FooterTemplateFile)
+	t, err := htmltemplate.ParseFiles(TestTemplateFile,
+		FooterTemplateFile)
 
 	if err != nil {
 		return err
@@ -361,9 +329,10 @@ func (h *EmailHandler) SendTestEmail(
 		return err
 	}
 
-	//log.Debug().Msgf("email %v %v %v", address, subject, body.String())
-
-	err = h.Mailer.SendHtmlMail(context.Background(), address, "System Test Email", body.String())
+	err = h.Mailer.SendHtmlMail(context.Background(),
+		address,
+		"System Test Email",
+		body.String())
 
 	if err != nil {
 		return err
