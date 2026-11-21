@@ -4,7 +4,8 @@ import (
 	"context"
 
 	"github.com/antonybholmes/go-edb-mail-server/config"
-	email "github.com/antonybholmes/go-edb-mail-server/mail"
+	email "github.com/antonybholmes/go-mail"
+	awsmail "github.com/antonybholmes/go-mail/aws"
 	"github.com/antonybholmes/go-sys"
 	"github.com/antonybholmes/go-sys/env"
 	"github.com/antonybholmes/go-sys/log"
@@ -54,8 +55,12 @@ func main() {
 
 	ctx := context.Background()
 
-	emailHandler := email.NewEmailHandler(cfg)
-	var consumer QueueProcessor = NewSQSEmailConsumer(cfg, emailHandler, pool)
+	emailHandler := NewEmailHandler(cfg)
+
+	var consumer email.QueueProcessor = awsmail.NewSQSEmailConsumer(cfg.AWS.SQS.QueueURL,
+		cfg.App.Threads,
+		emailHandler,
+		pool)
 
 	//ConsumeRedis(pool)
 	consumer.Consume(ctx)

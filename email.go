@@ -1,4 +1,4 @@
-package mail
+package main
 
 import (
 	"bytes"
@@ -11,14 +11,13 @@ import (
 
 	"github.com/antonybholmes/go-edb-mail-server/config"
 	email "github.com/antonybholmes/go-mail"
+	awsmail "github.com/antonybholmes/go-mail/aws"
 	"github.com/antonybholmes/go-sys"
 	"github.com/antonybholmes/go-sys/log"
 
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
 )
-
-//const RedirectUrlParam = "redirectUrl"
 
 type (
 	TimeSensitive struct {
@@ -59,10 +58,10 @@ const (
 	EmailTypeTest            = "test"
 )
 
-func NewEmailHandler(cfg *config.AppConfig) *EmailHandler {
+func NewEmailHandler(cfg *config.AppConfig) email.MailQueue {
 	return &EmailHandler{
 		Config: cfg,
-		Mailer: email.NewSesMailer(sys.Must(mail.ParseAddress(cfg.App.From))),
+		Mailer: awsmail.NewSESMailer(sys.Must(mail.ParseAddress(cfg.App.From))),
 	}
 }
 
@@ -375,7 +374,7 @@ func (h *EmailHandler) SendTestEmail(
 	return nil
 }
 
-func (h *EmailHandler) SendEmail(m *email.MailItem) error {
+func (h *EmailHandler) SendMail(m *email.MailItem) error {
 
 	switch m.EmailType {
 	case EmailTypeVerify:
