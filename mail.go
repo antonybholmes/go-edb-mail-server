@@ -13,6 +13,7 @@ import (
 	"github.com/antonybholmes/go-jobs"
 	email "github.com/antonybholmes/go-mail"
 	awsmail "github.com/antonybholmes/go-mail/aws"
+	"github.com/aws/aws-sdk-go-v2/aws"
 
 	"github.com/antonybholmes/go-sys/log"
 
@@ -30,7 +31,7 @@ type (
 		Name          string
 		From          string
 		TimeSensitive *TimeSensitive
-		Payload       *email.Payload
+		Payload       *jobs.Payload
 		Link          string
 		DoNotReply    string
 		Job           *jobs.BaseJob
@@ -50,25 +51,25 @@ const (
 	FooterTemplateFile = "templates/html/emails/footer.html"
 )
 
-func NewEmailHandler(cfg *config.AppConfig) (*EmailHandler, error) {
-	address, err := mail.ParseAddress(cfg.App.Email.From)
+func NewEmailHandler(cfg aws.Config, appconfig *config.AppConfig) (*EmailHandler, error) {
+	address, err := mail.ParseAddress(appconfig.App.Email.From)
 
 	if err != nil {
 		return nil, fmt.Errorf("invalid from address: %w", err)
 	}
 
-	mailer, err := awsmail.NewSESMailer(address)
+	mailer, err := awsmail.NewSESMailer(cfg, address)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create SES mailer: %w", err)
 	}
 
 	return &EmailHandler{
-		Config: cfg,
+		Config: appconfig,
 		Mailer: mailer,
 	}, nil
 }
 
-func (h *EmailHandler) SendPasswordlessSigninEmail(mail *email.MailItem) error {
+func (h *EmailHandler) SendPasswordlessSigninEmail(mail *jobs.MailQueueItem) error {
 
 	var file string
 
@@ -84,7 +85,7 @@ func (h *EmailHandler) SendPasswordlessSigninEmail(mail *email.MailItem) error {
 		file)
 }
 
-func (h *EmailHandler) SendVerifyEmail(mail *email.MailItem) error {
+func (h *EmailHandler) SendVerifyEmail(mail *jobs.MailQueueItem) error {
 
 	var file string
 
@@ -100,7 +101,7 @@ func (h *EmailHandler) SendVerifyEmail(mail *email.MailItem) error {
 		file)
 }
 
-func (h *EmailHandler) SendVerifiedEmail(mail *email.MailItem) error {
+func (h *EmailHandler) SendVerifiedEmail(mail *jobs.MailQueueItem) error {
 
 	file := "templates/html/emails/verify/verified.html"
 
@@ -110,7 +111,7 @@ func (h *EmailHandler) SendVerifiedEmail(mail *email.MailItem) error {
 		file)
 }
 
-func (h *EmailHandler) SendPasswordResetEmail(mail *email.MailItem) error {
+func (h *EmailHandler) SendPasswordResetEmail(mail *jobs.MailQueueItem) error {
 
 	var file string
 
@@ -126,7 +127,7 @@ func (h *EmailHandler) SendPasswordResetEmail(mail *email.MailItem) error {
 		file)
 }
 
-func (h *EmailHandler) SendPasswordUpdatedEmail(mail *email.MailItem) error {
+func (h *EmailHandler) SendPasswordUpdatedEmail(mail *jobs.MailQueueItem) error {
 
 	var file string
 
@@ -142,7 +143,7 @@ func (h *EmailHandler) SendPasswordUpdatedEmail(mail *email.MailItem) error {
 		file)
 }
 
-func (h *EmailHandler) SendEmailResetEmail(mail *email.MailItem) error {
+func (h *EmailHandler) SendEmailResetEmail(mail *jobs.MailQueueItem) error {
 
 	var file string
 
@@ -158,7 +159,7 @@ func (h *EmailHandler) SendEmailResetEmail(mail *email.MailItem) error {
 		file)
 }
 
-func (h *EmailHandler) SendEmailUpdatedEmail(mail *email.MailItem) error {
+func (h *EmailHandler) SendEmailUpdatedEmail(mail *jobs.MailQueueItem) error {
 
 	file := "templates/html/emails/email/updated.html"
 
@@ -168,7 +169,7 @@ func (h *EmailHandler) SendEmailUpdatedEmail(mail *email.MailItem) error {
 		file)
 }
 
-func (h *EmailHandler) SendAccountCreatedEmail(mail *email.MailItem) error {
+func (h *EmailHandler) SendAccountCreatedEmail(mail *jobs.MailQueueItem) error {
 
 	file := "templates/html/emails/account/created.html"
 
@@ -178,7 +179,7 @@ func (h *EmailHandler) SendAccountCreatedEmail(mail *email.MailItem) error {
 		file)
 }
 
-func (h *EmailHandler) SendAccountUpdatedEmail(mail *email.MailItem) error {
+func (h *EmailHandler) SendAccountUpdatedEmail(mail *jobs.MailQueueItem) error {
 
 	file := "templates/html/emails/account/updated.html"
 
@@ -188,7 +189,7 @@ func (h *EmailHandler) SendAccountUpdatedEmail(mail *email.MailItem) error {
 		file)
 }
 
-func (h *EmailHandler) SendOTPEmail(mail *email.MailItem) error {
+func (h *EmailHandler) SendOTPEmail(mail *jobs.MailQueueItem) error {
 
 	file := "templates/html/emails/otp/otp.html"
 
@@ -200,7 +201,7 @@ func (h *EmailHandler) SendOTPEmail(mail *email.MailItem) error {
 	return err
 }
 
-func (h *EmailHandler) SendJobSubmittedEmail(mail *email.MailItem) error {
+func (h *EmailHandler) SendJobSubmittedEmail(mail *jobs.MailQueueItem) error {
 
 	file := "templates/html/emails/jobs/submitted.html"
 
@@ -210,7 +211,7 @@ func (h *EmailHandler) SendJobSubmittedEmail(mail *email.MailItem) error {
 }
 
 func (h *EmailHandler) SendEmailWithToken(subject string,
-	m *email.MailItem,
+	m *jobs.MailQueueItem,
 	linkUrl string,
 	templateFile string) error {
 
@@ -310,7 +311,7 @@ func (h *EmailHandler) SendEmailWithToken(subject string,
 }
 
 func (h *EmailHandler) SendJobEmail(subject string,
-	m *email.MailItem,
+	m *jobs.MailQueueItem,
 	templateFile string) error {
 
 	address, err := mail.ParseAddress(m.To)
@@ -358,7 +359,7 @@ func (h *EmailHandler) SendJobEmail(subject string,
 }
 
 func (h *EmailHandler) SendTestEmail(
-	m *email.MailItem) error {
+	m *jobs.MailQueueItem) error {
 
 	address, err := mail.ParseAddress(m.To)
 
@@ -403,7 +404,7 @@ func (h *EmailHandler) SendTestEmail(
 	return nil
 }
 
-func (h *EmailHandler) SendMail(cts context.Context, m *email.MailItem) error {
+func (h *EmailHandler) SendMail(cts context.Context, m *jobs.MailQueueItem) error {
 
 	switch m.EmailType {
 	case email.EmailTypeVerify:
@@ -426,7 +427,7 @@ func (h *EmailHandler) SendMail(cts context.Context, m *email.MailItem) error {
 		return h.SendAccountUpdatedEmail(m)
 	case email.EmailTypeOTP:
 		return h.SendOTPEmail(m)
-	case email.EmailTypeJobSubmitted:
+	case jobs.EmailTypeJobSubmitted:
 		return h.SendJobSubmittedEmail(m)
 	case email.EmailTypeTest:
 		return h.SendTestEmail(m)
@@ -437,7 +438,7 @@ func (h *EmailHandler) SendMail(cts context.Context, m *email.MailItem) error {
 
 }
 
-func GetNameFromMailItem(m *email.MailItem) string {
+func GetNameFromMailItem(m *jobs.MailQueueItem) string {
 	var name string = ""
 
 	if m.Name != "" {
@@ -455,7 +456,7 @@ func GetNameFromMailItem(m *email.MailItem) string {
 	return name
 }
 
-func GetFirstNameFromMailItem(m *email.MailItem) string {
+func GetFirstNameFromMailItem(m *jobs.MailQueueItem) string {
 	var name string = GetNameFromMailItem(m)
 
 	// Use only the first word of the name if there are still spaces

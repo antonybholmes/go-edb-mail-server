@@ -59,15 +59,15 @@ func main() {
 
 	client := sqs.NewFromConfig(cfg)
 
-	emailHandler, err := NewEmailHandler(appconfig)
+	emailHandler, err := NewEmailHandler(cfg, appconfig)
 	if err != nil {
 		log.Fatal().Err(err).Msg("Failed to create email handler")
 	}
 
-	sqsConsumer, err := jobsaws.NewSQSConsumer(appconfig.AWS.SQS.QueueURL,
+	sqsConsumer, err := jobsaws.NewSQSConsumer(client, appconfig.AWS.SQS.QueueURL,
 		appconfig.AWS.SQS.Threads,
 		appconfig.AWS.SQS.WaitTimeSecs,
-		client)
+	)
 
 	if err != nil {
 		log.Fatal().Err(err).Msg("Failed to create email consumer")
