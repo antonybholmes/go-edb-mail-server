@@ -30,11 +30,13 @@ type (
 	EmailBody struct {
 		TimeSensitive *TimeSensitive
 		Payload       *jobs.Payload
-		Job           *jobs.BaseJob
+		Job           *jobs.Job
 		Name          string
 		From          string
 		Link          string
 		DoNotReply    string
+		// The name of the system sending the email.
+		App string
 	}
 
 	EmailHandler struct {
@@ -230,7 +232,11 @@ func (h *EmailHandler) SendEmailWithToken(subject string,
 		return err
 	}
 
-	firstName := GetFirstNameFromMailItem(m)
+	firstName, err := GetFirstNameFromMailItem(m, address)
+
+	if err != nil {
+		return err
+	}
 
 	link := ""
 
@@ -268,7 +274,7 @@ func (h *EmailHandler) SendEmailWithToken(subject string,
 		Payload:    m.Payload,
 		Link:       link,
 		From:       m.From,
-		DoNotReply: h.Config.App.DoNotReply,
+		DoNotReply: h.Config.App.Email.DoNotReply,
 	}
 
 	if m.TTL != "" {
@@ -329,13 +335,16 @@ func (h *EmailHandler) SendJobEmail(subject string,
 		return err
 	}
 
-	firstName := GetFirstNameFromMailItem(m)
+	firstName, err := GetFirstNameFromMailItem(m, address)
+	if err != nil {
+		return err
+	}
 
 	emailBody := EmailBody{
 		Name:       firstName,
 		Job:        m.Job,
 		From:       m.From,
-		DoNotReply: h.Config.App.DoNotReply,
+		DoNotReply: h.Config.App.Email.DoNotReply,
 	}
 
 	err = t.ExecuteTemplate(&body, "layout", emailBody)
@@ -377,11 +386,17 @@ func (h *EmailHandler) SendTestEmail(
 		return err
 	}
 
-	firstName := GetFirstNameFromMailItem(m)
+	firstName, err := GetFirstNameFromMailItem(m, address)
+	if err != nil {
+		return err
+	}
+
+	log.Debug().Msgf("First name: %s", firstName)
 
 	emailBody := EmailBody{
 		Name:       firstName,
-		DoNotReply: h.Config.App.DoNotReply,
+		App:        config.AppName,
+		DoNotReply: h.Config.App.Email.DoNotReply,
 	}
 
 	err = t.ExecuteTemplate(&body, "layout", emailBody)
@@ -405,6 +420,8 @@ func (h *EmailHandler) SendTestEmail(
 }
 
 func (h *EmailHandler) SendMail(cts context.Context, m *jobs.MailQueueItem) error {
+
+	log.Debug().Msgf("Sending email of type: %s", m.EmailType)
 
 	switch m.EmailType {
 	case email.EmailTypeVerify:
@@ -438,14 +455,19 @@ func (h *EmailHandler) SendMail(cts context.Context, m *jobs.MailQueueItem) erro
 
 }
 
-func GetNameFromMailItem(m *jobs.MailQueueItem) string {
+// Tries to figure out the recipient's name from the mail item or email address.
+// If name is provided, it is used; otherwise, the name is guessed from the email address.
+func GetNameFromMailItem(m *jobs.MailQueueItem, address *mail.Address) (string, error) {
 	var name string = ""
+
+	log.Debug().Msgf("Name: %s", m.Name)
 
 	if m.Name != "" {
 		name = m.Name
 	} else {
+		log.Debug().Msgf("Name not provided, guessing from email address: %s", address.Address)
 		// Guess the first name from the email address.
-		name = strings.Split(m.From, "@")[0]
+		name = strings.Split(address.Address, "@")[0]
 
 		name = strings.ReplaceAll(name, ".", " ")
 
@@ -453,14 +475,19 @@ func GetNameFromMailItem(m *jobs.MailQueueItem) string {
 		name = c.String(name)
 	}
 
-	return name
+	return name, nil
 }
 
-func GetFirstNameFromMailItem(m *jobs.MailQueueItem) string {
-	var name string = GetNameFromMailItem(m)
+// Tries to figure out the recipient's name from the mail item or email address.
+// If name is provided, it is used; otherwise, the name is guessed from the email address.
+func GetFirstNameFromMailItem(m *jobs.MailQueueItem, address *mail.Address) (string, error) {
+	name, err := GetNameFromMailItem(m, address)
+	if err != nil {
+		return "", err
+	}
 
 	// Use only the first word of the name if there are still spaces
 	name = strings.Split(name, " ")[0]
 
-	return name
+	return name, nil
 }

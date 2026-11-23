@@ -1,12 +1,14 @@
 package config
 
 import (
+	"crypto/ecdsa"
 	"os"
 	"sync"
 
 	"github.com/antonybholmes/go-sys/log"
 
 	"github.com/antonybholmes/go-sys"
+	"github.com/golang-jwt/jwt/v5"
 	"go.yaml.in/yaml/v4"
 )
 
@@ -17,11 +19,19 @@ type AppConfig struct {
 	} `yaml:"-"`
 	App struct {
 		Email struct {
-			From string `yaml:"from"`
+			From       string `yaml:"from"`
+			DoNotReply string `yaml:"doNotReply"`
 		} `yaml:"email"`
-		DoNotReply string          `yaml:"doNotReply"`
-		Version    sys.VersionInfo `yaml:"-"`
+		Port           string   `yaml:"port"`
+		TrustedProxies []string `yaml:"trustedProxies"`
+
+		Version sys.VersionInfo `yaml:"-"`
 	} `yaml:"app"`
+	Auth struct {
+		Keys struct {
+			JwtES256PublicKey *ecdsa.PublicKey `yaml:"-"`
+		} `yaml:"-"`
+	} `yaml:"-"`
 	AWS struct {
 		SQS struct {
 			QueueURL     string `yaml:"-"`
@@ -32,8 +42,9 @@ type AppConfig struct {
 }
 
 const (
-	AppName = "Experiments Mail Server"
-	AppId   = "edb-mailserver"
+	AppName   = "Experiments Mail Server"
+	Copyright = "Copyright (C) 2026 Antony Holmes"
+	AppId     = "edb-mailserver"
 	//EmailFrom      = "Experiments Team <donotreply@rdf-lab.org>"
 	ProductName = "Experiments"
 	//TextDoNotReply = "Please do not reply to this email as we are not able to respond to messages sent to this address." //"Please do not reply to this message. It was sent from a notification-only email address that we don't monitor."
@@ -91,6 +102,18 @@ func load() *AppConfig {
 
 	cfg.AWS.SQS.QueueURL = os.Getenv("AWS_SQS_QUEUE_URL")
 	cfg.App.Version = sys.Must(sys.LoadVersionInfo("version.json"))
+
+	// load some keys
+
+	bytes, err := os.ReadFile("jwt.es256.public.pem")
+	if err != nil {
+		log.Fatal().Msgf("%s", err)
+	}
+
+	cfg.Auth.Keys.JwtES256PublicKey, err = jwt.ParseECPublicKeyFromPEM(bytes)
+	if err != nil {
+		log.Fatal().Msgf("%s", err)
+	}
 
 	return &cfg
 }
