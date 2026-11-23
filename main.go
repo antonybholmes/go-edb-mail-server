@@ -4,9 +4,9 @@ import (
 	"context"
 
 	"github.com/antonybholmes/go-edb-mail-server/config"
-	jobsaws "github.com/antonybholmes/go-jobs/aws"
 	email "github.com/antonybholmes/go-mail"
 	awsmail "github.com/antonybholmes/go-mail/aws"
+	awssys "github.com/antonybholmes/go-sys/aws"
 	"github.com/antonybholmes/go-sys/env"
 	"github.com/antonybholmes/go-sys/log"
 	awsconfig "github.com/aws/aws-sdk-go-v2/config"
@@ -64,7 +64,7 @@ func main() {
 		log.Fatal().Err(err).Msg("Failed to create email handler")
 	}
 
-	sqsConsumer, err := jobsaws.NewSQSConsumer(client, appconfig.AWS.SQS.QueueURL,
+	sqsConsumer, err := awssys.NewSQSConsumer(client, appconfig.AWS.SQS.QueueURL,
 		appconfig.AWS.SQS.Threads,
 		appconfig.AWS.SQS.WaitTimeSecs,
 	)

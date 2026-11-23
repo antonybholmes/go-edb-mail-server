@@ -12,6 +12,7 @@ require (
 	github.com/antonybholmes/go-jobs v0.0.0
 	github.com/antonybholmes/go-mail v0.0.0-20261120230506-649df8ca9051
 	github.com/antonybholmes/go-sys v0.0.0-20261118211639-408b038a66d6
+	github.com/aws/aws-sdk-go-v2 v1.48.0
 	github.com/aws/aws-sdk-go-v2/config v1.33.21
 	github.com/aws/aws-sdk-go-v2/service/sqs v1.53.0
 	go.yaml.in/yaml/v4 v4.0.0
@@ -19,7 +20,6 @@ require (
 )
 
 require (
-	github.com/aws/aws-sdk-go-v2 v1.48.0 // indirect
 	github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream v1.7.27 // indirect
 	github.com/aws/aws-sdk-go-v2/credentials v1.21.3 // indirect
 	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.20.9 // indirect

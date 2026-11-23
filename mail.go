@@ -28,13 +28,13 @@ type (
 	}
 
 	EmailBody struct {
-		Name          string
-		From          string
 		TimeSensitive *TimeSensitive
 		Payload       *jobs.Payload
+		Job           *jobs.BaseJob
+		Name          string
+		From          string
 		Link          string
 		DoNotReply    string
-		Job           *jobs.BaseJob
 	}
 
 	EmailHandler struct {
