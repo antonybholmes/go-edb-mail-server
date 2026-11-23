@@ -1,5 +1,5 @@
 msg=$1 #"Bug fixes and updates."
-type="fix"
+type="Fix"
 branch="dev"
 
 if [[ -z "${msg}" ]]
@@ -32,13 +32,18 @@ done
 echo "${type}: ${msg}"
 echo ${branch}
 
-./commit.sh -t "${type}" -m "${msg}" -b dev
+
+
+./commit.sh -t "${type}" -m "${msg}"  
 
 git switch main
-git merge dev -m "${type}: ${msg}" -X theirs
-git checkout dev -- version.json
+ 
+#git merge dev -m "${type}: ${msg}" -X theirs
+#git checkout dev -- version.json
+git reset --hard dev
+git push --force-with-lease origin main
 
 #git push -u origin main
-./commit.sh -t "${type}" -m "${msg}" -b main
+./commit.sh -t "${type}" -m "${msg}"
 
 git switch dev
