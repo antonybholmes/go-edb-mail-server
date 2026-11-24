@@ -63,9 +63,11 @@ func main() {
 		log.Fatal().Err(err).Msg("Failed to create email handler")
 	}
 
-	sqsConsumer, err := awssys.NewSQSConsumer(sqsClient, appconfig.AWS.SQS.QueueURL,
+	sqsConsumer, err := awssys.NewSQSConsumer(sqsClient,
+		appconfig.AWS.SQS.QueueURL,
 		appconfig.AWS.SQS.Threads,
 		appconfig.AWS.SQS.WaitTimeSecs,
+		appconfig.AWS.SQS.MaxReceiveCount,
 	)
 
 	// Create the email queue sending emails in addition to handling job submissions

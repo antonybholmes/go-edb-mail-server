@@ -34,9 +34,10 @@ type AppConfig struct {
 	} `yaml:"-"`
 	AWS struct {
 		SQS struct {
-			QueueURL     string `yaml:"-"`
-			Threads      int    `yaml:"threads"`
-			WaitTimeSecs int    `yaml:"waitTimeSecs"`
+			QueueURL        string `yaml:"-"`
+			Threads         int    `yaml:"threads"`
+			WaitTimeSecs    int    `yaml:"waitTimeSecs"`
+			MaxReceiveCount int    `yaml:"maxReceiveCount"`
 		} `yaml:"sqs"`
 	} `yaml:"aws"`
 }

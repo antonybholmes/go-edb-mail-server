@@ -10,3 +10,4 @@ aws:
   sqs:
     threads: 5
     waitTimeSecs: 10
+    maxReceiveCount: 5
