@@ -5,10 +5,11 @@
   <body>
     <p>Hi {{.Name}},</p>
     <p>
-      Your <strong>{{.Job.Type}}</strong> job with id
-      <strong>{{.Job.ID}}</strong> has been submitted.
+      Your <strong style="text-transform: capitalize">{{.Job.Type}}</strong> job
+      has been submitted. You will be notified once the job is processed.
     </p>
-    <p>You will be notified once the job is processed.</p>
+
+    <p>Job Reference: <strong>{{.Job.ID}}</strong></p>
 
     {{template "footer" . }}
   </body>

@@ -203,11 +203,29 @@ func (h *EmailHandler) SendOTPEmail(mail *jobs.MailQueueItem) error {
 	return err
 }
 
-func (h *EmailHandler) SendJobSubmittedEmail(mail *jobs.MailQueueItem) error {
+func (h *EmailHandler) SendJobEmail(mail *jobs.MailQueueItem) error {
 
-	file := "templates/html/emails/jobs/submitted.html"
+	var file string
+	var title string
 
-	return h.SendJobEmail("Job Submitted",
+	log.Debug().Msgf("mail annoying %s %s %s", mail.Job.ID, mail.From, mail.Job.User.Email)
+
+	switch mail.Job.Status {
+	case jobs.JobStatusSubmitted:
+		title = "Job Submission"
+		file = "templates/html/emails/jobs/submitted.html"
+	case jobs.JobStatusCompleted:
+		title = "Job Completed"
+		file = "templates/html/emails/jobs/completed.html"
+	default:
+		title = "Job Status"
+		file = "templates/html/emails/jobs/status.html"
+	}
+
+	// capitalize job type
+	title = cases.Title(language.English).String(mail.Job.Type) + " " + title
+
+	return h.sendJobEmail(title,
 		mail,
 		file)
 }
@@ -316,7 +334,7 @@ func (h *EmailHandler) SendEmailWithToken(subject string,
 	return nil
 }
 
-func (h *EmailHandler) SendJobEmail(subject string,
+func (h *EmailHandler) sendJobEmail(subject string,
 	m *jobs.MailQueueItem,
 	templateFile string) error {
 
@@ -444,8 +462,8 @@ func (h *EmailHandler) SendMail(cts context.Context, m *jobs.MailQueueItem) erro
 		return h.SendAccountUpdatedEmail(m)
 	case email.EmailTypeOTP:
 		return h.SendOTPEmail(m)
-	case jobs.EmailTypeJobSubmitted:
-		return h.SendJobSubmittedEmail(m)
+	case jobs.EmailTypeJob:
+		return h.SendJobEmail(m)
 	case email.EmailTypeTest:
 		return h.SendTestEmail(m)
 	default:

@@ -33,6 +33,7 @@ go-edb-server
 
 tests.sh
 
-jwtRS256.key
-jwtRS256.key.pub
+*.key
+*.pub
+*.pem
 

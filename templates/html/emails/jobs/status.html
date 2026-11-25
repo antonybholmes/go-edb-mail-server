@@ -1,0 +1,18 @@
+<!-- layout.html -->
+{{define "layout"}}
+<!doctype html>
+<html>
+  <body>
+    <p>Hi {{.Name}},</p>
+    <p>
+      The status of your
+      <strong style="text-transform: capitalize">{{.Job.Type}}</strong> job has
+      changed to <strong>{{.Job.Status}}</strong>.
+    </p>
+
+    <p>Job Reference: <strong>{{.Job.ID}}</strong></p>
+
+    {{template "footer" . }}
+  </body>
+</html>
+{{end}}
