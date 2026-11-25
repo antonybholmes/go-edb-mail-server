@@ -43,11 +43,10 @@ type AppConfig struct {
 }
 
 const (
-	AppName   = "Experiments Mail Server"
 	Copyright = "Copyright (C) 2026 Antony Holmes"
 	AppId     = "edb-mailserver"
 	//EmailFrom      = "Experiments Team <donotreply@rdf-lab.org>"
-	ProductName = "Experiments"
+	AppName = "Experiments Mail Server"
 	//TextDoNotReply = "Please do not reply to this email as we are not able to respond to messages sent to this address." //"Please do not reply to this message. It was sent from a notification-only email address that we don't monitor."
 	ConfigFile = "config/app.yaml"
 )
@@ -111,7 +110,7 @@ func load() *AppConfig {
 	if err != nil {
 		log.Fatal().Msgf("%s", err)
 	}
-	
+
 	cfg.Auth.Keys.JwtES256PublicKey = publicKey
 
 	return &cfg
