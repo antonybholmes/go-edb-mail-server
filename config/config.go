@@ -1,14 +1,14 @@
 package config
 
 import (
-	"crypto/ecdsa"
+	"crypto"
 	"os"
 	"sync"
 
+	"github.com/antonybholmes/go-sys/auth"
 	"github.com/antonybholmes/go-sys/log"
 
 	"github.com/antonybholmes/go-sys"
-	"github.com/golang-jwt/jwt/v5"
 	"go.yaml.in/yaml/v4"
 )
 
@@ -29,7 +29,7 @@ type AppConfig struct {
 	} `yaml:"app"`
 	Auth struct {
 		Keys struct {
-			JwtES256PublicKey *ecdsa.PublicKey `yaml:"-"`
+			JwtES256PublicKey crypto.PublicKey `yaml:"-"`
 		} `yaml:"-"`
 	} `yaml:"-"`
 	AWS struct {
@@ -106,15 +106,12 @@ func load() *AppConfig {
 
 	// load some keys
 
-	bytes, err := os.ReadFile("jwt.es256.public.pem")
-	if err != nil {
-		log.Fatal().Msgf("%s", err)
-	}
+	publicKey, err := auth.LoadPublicPEM("jwt.es256.public.pem")
 
-	cfg.Auth.Keys.JwtES256PublicKey, err = jwt.ParseECPublicKeyFromPEM(bytes)
 	if err != nil {
 		log.Fatal().Msgf("%s", err)
 	}
+	cfg.Auth.Keys.JwtES256PublicKey = publicKey
 
 	return &cfg
 }
