@@ -111,6 +111,7 @@ func load() *AppConfig {
 	if err != nil {
 		log.Fatal().Msgf("%s", err)
 	}
+	
 	cfg.Auth.Keys.JwtES256PublicKey = publicKey
 
 	return &cfg
