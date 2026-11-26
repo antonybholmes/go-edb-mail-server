@@ -35,6 +35,7 @@ type (
 		From          string
 		Link          string
 		DoNotReply    string
+		Time          string
 		// The name of the system sending the email.
 		App string
 	}
@@ -222,8 +223,8 @@ func (h *EmailHandler) SendJobEmail(mail *jobs.MailQueueItem) error {
 		file = "templates/html/emails/jobs/status.html"
 	}
 
-	// capitalize job type
-	title = cases.Title(language.English).String(mail.Job.Type) + " " + title
+	// capitalize job type so we have Crispr Job Completed
+	title = cases.Title(language.English).String(string(mail.Job.Type)) + " " + title
 
 	return h.sendJobEmail(title,
 		mail,
@@ -358,10 +359,13 @@ func (h *EmailHandler) sendJobEmail(subject string,
 		return err
 	}
 
+	formattedDate := m.Job.CreatedAt.Format("Jan 2, 2006 at 3:04 PM")
+
 	emailBody := EmailBody{
 		Name:       firstName,
 		Job:        m.Job,
 		From:       m.From,
+		Time:       formattedDate,
 		DoNotReply: h.Config.App.Email.DoNotReply,
 	}
 
