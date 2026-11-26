@@ -521,12 +521,14 @@ func GetFirstNameFromMailItem(m *jobs.MailQueueItem, address *mail.Address) (str
 }
 
 func ParseFiles(contentTemplateFiles ...string) (*htmltemplate.Template, error) {
-	// All templates are called layout
+	// Load the default base and footer templates along with the content templates.
 	files := append([]string{BaseTemplateFile, FooterTemplateFile}, contentTemplateFiles...)
 
 	return htmltemplate.ParseFiles(files...)
 }
 
 func ExecuteTemplate(t *htmltemplate.Template, body io.Writer, emailBody *EmailBody) error {
+
+	// Execute the "base" template with the provided email body.
 	return t.ExecuteTemplate(body, "base", emailBody)
 }
