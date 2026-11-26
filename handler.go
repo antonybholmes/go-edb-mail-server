@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	htmltemplate "html/template"
+	"io"
 	"net/mail"
 	"net/url"
 	"strings"
@@ -28,16 +29,17 @@ type (
 	}
 
 	EmailBody struct {
-		TimeSensitive *TimeSensitive
-		Payload       *jobs.Payload
-		Job           *jobs.Job
-		Name          string
-		From          string
-		Link          string
-		DoNotReply    string
-		Time          string
+		TimeSensitive *TimeSensitive `json:"timeSensitive,omitempty"`
+		Payload       *jobs.Payload  `json:"payload,omitempty"`
+		Job           *jobs.Job      `json:"job,omitempty"`
+		Name          string         `json:"name,omitempty"`
+		From          string         `json:"from,omitempty"`
+		Link          string         `json:"link,omitempty"`
+		DoNotReply    string         `json:"doNotReply,omitempty"`
+		// To indiate a time when event happened
+		CreatedAt string `json:"createdAt,omitempty"`
 		// The name of the system sending the email.
-		App string
+		App string `json:"app,omitempty"`
 	}
 
 	EmailHandler struct {
@@ -49,9 +51,11 @@ type (
 )
 
 const (
-	JwtParam           = "jwt"
-	TestTemplateFile   = "templates/html/emails/test.html"
-	FooterTemplateFile = "templates/html/emails/footer.html"
+	JwtParam               = "jwt"
+	TestTemplateFile       = "templates/html/emails/test.gohtml"
+	JobDetailsTemplateFile = "templates/html/emails/jobs/details.gohtml"
+	BaseTemplateFile       = "templates/html/emails/base.gohtml"
+	FooterTemplateFile     = "templates/html/emails/footer.gohtml"
 )
 
 func NewEmailHandler(cfg aws.Config, appconfig *config.AppConfig) (*EmailHandler, error) {
@@ -77,9 +81,9 @@ func (h *EmailHandler) SendPasswordlessSigninEmail(mail *jobs.MailQueueItem) err
 	var file string
 
 	if mail.Mode == "api" {
-		file = "templates/html/emails/passwordless/api.html"
+		file = "templates/html/emails/passwordless/api.gohtml"
 	} else {
-		file = "templates/html/emails/passwordless/web.html"
+		file = "templates/html/emails/passwordless/web.gohtml"
 	}
 
 	return h.SendEmailWithToken("Passwordless Sign In",
@@ -93,9 +97,9 @@ func (h *EmailHandler) SendVerifyEmail(mail *jobs.MailQueueItem) error {
 	var file string
 
 	if mail.Mode == "api" {
-		file = "templates/html/emails/verify/api.html"
+		file = "templates/html/emails/verify/api.gohtml"
 	} else {
-		file = "templates/html/emails/verify/web.html"
+		file = "templates/html/emails/verify/web.gohtml"
 	}
 
 	return h.SendEmailWithToken("Email Address Verification",
@@ -106,7 +110,7 @@ func (h *EmailHandler) SendVerifyEmail(mail *jobs.MailQueueItem) error {
 
 func (h *EmailHandler) SendVerifiedEmail(mail *jobs.MailQueueItem) error {
 
-	file := "templates/html/emails/verify/verified.html"
+	file := "templates/html/emails/verify/verified.gohtml"
 
 	return h.SendEmailWithToken("Email Address Verified",
 		mail,
@@ -119,9 +123,9 @@ func (h *EmailHandler) SendPasswordResetEmail(mail *jobs.MailQueueItem) error {
 	var file string
 
 	if mail.LinkUrl != "" {
-		file = "templates/html/emails/password/reset/web.html"
+		file = "templates/html/emails/password/reset/web.gohtml"
 	} else {
-		file = "templates/html/emails/password/reset/api.html"
+		file = "templates/html/emails/password/reset/api.gohtml"
 	}
 
 	return h.SendEmailWithToken("Password Reset",
@@ -135,9 +139,9 @@ func (h *EmailHandler) SendPasswordUpdatedEmail(mail *jobs.MailQueueItem) error 
 	var file string
 
 	if mail.LinkUrl != "" {
-		file = "templates/html/emails/password/switch-to-passwordless.html"
+		file = "templates/html/emails/password/switch-to-passwordless.gohtml"
 	} else {
-		file = "templates/html/emails/password/updated.html"
+		file = "templates/html/emails/password/updated.gohtml"
 	}
 
 	return h.SendEmailWithToken("Password Updated",
@@ -151,9 +155,9 @@ func (h *EmailHandler) SendEmailResetEmail(mail *jobs.MailQueueItem) error {
 	var file string
 
 	if mail.LinkUrl != "" {
-		file = "templates/html/emails/email/reset/web.html"
+		file = "templates/html/emails/email/reset/web.gohtml"
 	} else {
-		file = "templates/html/emails/email/reset/api.html"
+		file = "templates/html/emails/email/reset/api.gohtml"
 	}
 
 	return h.SendEmailWithToken("Email Reset",
@@ -164,7 +168,7 @@ func (h *EmailHandler) SendEmailResetEmail(mail *jobs.MailQueueItem) error {
 
 func (h *EmailHandler) SendEmailUpdatedEmail(mail *jobs.MailQueueItem) error {
 
-	file := "templates/html/emails/email/updated.html"
+	file := "templates/html/emails/email/updated.gohtml"
 
 	return h.SendEmailWithToken("Email Updated",
 		mail,
@@ -174,7 +178,7 @@ func (h *EmailHandler) SendEmailUpdatedEmail(mail *jobs.MailQueueItem) error {
 
 func (h *EmailHandler) SendAccountCreatedEmail(mail *jobs.MailQueueItem) error {
 
-	file := "templates/html/emails/account/created.html"
+	file := "templates/html/emails/account/created.gohtml"
 
 	return h.SendEmailWithToken("Account Created",
 		mail,
@@ -184,7 +188,7 @@ func (h *EmailHandler) SendAccountCreatedEmail(mail *jobs.MailQueueItem) error {
 
 func (h *EmailHandler) SendAccountUpdatedEmail(mail *jobs.MailQueueItem) error {
 
-	file := "templates/html/emails/account/updated.html"
+	file := "templates/html/emails/account/updated.gohtml"
 
 	return h.SendEmailWithToken("Account Updated",
 		mail,
@@ -194,7 +198,7 @@ func (h *EmailHandler) SendAccountUpdatedEmail(mail *jobs.MailQueueItem) error {
 
 func (h *EmailHandler) SendOTPEmail(mail *jobs.MailQueueItem) error {
 
-	file := "templates/html/emails/otp/otp.html"
+	file := "templates/html/emails/otp/otp.gohtml"
 
 	err := h.SendEmailWithToken(fmt.Sprintf("%s One-Time Passcode", config.AppName),
 		mail,
@@ -214,13 +218,13 @@ func (h *EmailHandler) SendJobEmail(mail *jobs.MailQueueItem) error {
 	switch mail.Job.Status {
 	case jobs.JobStatusSubmitted:
 		title = "Job Submission"
-		file = "templates/html/emails/jobs/submitted.html"
+		file = "templates/html/emails/jobs/submitted.gohtml"
 	case jobs.JobStatusCompleted:
 		title = "Job Completed"
-		file = "templates/html/emails/jobs/completed.html"
+		file = "templates/html/emails/jobs/completed.gohtml"
 	default:
 		title = "Job Status"
-		file = "templates/html/emails/jobs/status.html"
+		file = "templates/html/emails/jobs/status.gohtml"
 	}
 
 	// capitalize job type so we have Crispr Job Completed
@@ -234,7 +238,7 @@ func (h *EmailHandler) SendJobEmail(mail *jobs.MailQueueItem) error {
 func (h *EmailHandler) SendEmailWithToken(subject string,
 	m *jobs.MailQueueItem,
 	linkUrl string,
-	templateFile string) error {
+	contentTemplateFile string) error {
 
 	address, err := mail.ParseAddress(m.To)
 
@@ -245,7 +249,7 @@ func (h *EmailHandler) SendEmailWithToken(subject string,
 	var body bytes.Buffer
 
 	// All templates are called layout
-	t, err := htmltemplate.ParseFiles(templateFile, FooterTemplateFile)
+	t, err := ParseFiles(contentTemplateFile)
 
 	if err != nil {
 		return err
@@ -315,7 +319,7 @@ func (h *EmailHandler) SendEmailWithToken(subject string,
 		}
 	}
 
-	err = t.ExecuteTemplate(&body, "layout", emailBody)
+	err = ExecuteTemplate(t, &body, &emailBody)
 
 	if err != nil {
 		return err
@@ -348,7 +352,9 @@ func (h *EmailHandler) sendJobEmail(subject string,
 	var body bytes.Buffer
 
 	// All templates are called layout
-	t, err := htmltemplate.ParseFiles(templateFile, FooterTemplateFile)
+	t, err := ParseFiles(templateFile,
+		JobDetailsTemplateFile,
+	)
 
 	if err != nil {
 		return err
@@ -359,17 +365,18 @@ func (h *EmailHandler) sendJobEmail(subject string,
 		return err
 	}
 
-	formattedDate := m.Job.CreatedAt.Format("Jan 2, 2006 at 3:04 PM")
+	// Format the job creation date for display in the email
+	formattedDate := m.Job.CreatedAt.Format("Jan 2, 2006 3:04 PM")
 
 	emailBody := EmailBody{
 		Name:       firstName,
 		Job:        m.Job,
 		From:       m.From,
-		Time:       formattedDate,
+		CreatedAt:  formattedDate,
 		DoNotReply: h.Config.App.Email.DoNotReply,
 	}
 
-	err = t.ExecuteTemplate(&body, "layout", emailBody)
+	err = ExecuteTemplate(t, &body, &emailBody)
 
 	if err != nil {
 		return err
@@ -401,8 +408,7 @@ func (h *EmailHandler) SendTestEmail(
 	var body bytes.Buffer
 
 	// All templates are called layout
-	t, err := htmltemplate.ParseFiles(TestTemplateFile,
-		FooterTemplateFile)
+	t, err := ParseFiles(TestTemplateFile)
 
 	if err != nil {
 		return err
@@ -421,7 +427,7 @@ func (h *EmailHandler) SendTestEmail(
 		DoNotReply: h.Config.App.Email.DoNotReply,
 	}
 
-	err = t.ExecuteTemplate(&body, "layout", emailBody)
+	err = ExecuteTemplate(t, &body, &emailBody)
 
 	if err != nil {
 		return err
@@ -512,4 +518,15 @@ func GetFirstNameFromMailItem(m *jobs.MailQueueItem, address *mail.Address) (str
 	name = strings.Split(name, " ")[0]
 
 	return name, nil
+}
+
+func ParseFiles(contentTemplateFiles ...string) (*htmltemplate.Template, error) {
+	// All templates are called layout
+	files := append([]string{BaseTemplateFile, FooterTemplateFile}, contentTemplateFiles...)
+
+	return htmltemplate.ParseFiles(files...)
+}
+
+func ExecuteTemplate(t *htmltemplate.Template, body io.Writer, emailBody *EmailBody) error {
+	return t.ExecuteTemplate(body, "base", emailBody)
 }

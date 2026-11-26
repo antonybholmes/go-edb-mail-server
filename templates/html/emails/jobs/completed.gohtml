@@ -1,0 +1,22 @@
+{{define "content"}}
+
+<p>Hi {{.Name}},</p>
+<p>
+  Your <strong style="text-transform: capitalize">{{.Job.Type}}</strong> job has
+  completed. You can now review the results of your job.
+</p>
+
+{{ if .Link }}
+
+<p>
+  You can download the results of your job using this link:
+  <a href="{{.Link}}"
+    ><strong>{{.Link}}</strong></a
+  >
+</p>
+
+{{ end }}
+
+{{template "details" . }}
+
+{{ end }}

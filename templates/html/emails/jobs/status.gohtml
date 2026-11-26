@@ -1,0 +1,13 @@
+{{define "content"}}
+
+<p>Hi {{.Name}},</p>
+<p>
+  The status of your
+  <strong style="text-transform: capitalize">{{.Job.Type}}</strong> job has
+  changed to <strong>{{.Job.Status}}</strong
+  >.
+</p>
+
+{{template "details" . }}
+
+{{ end }}

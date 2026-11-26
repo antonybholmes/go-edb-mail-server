@@ -1,0 +1,11 @@
+{{define "content"}}
+
+<p>Hi {{.Name}},</p>
+<p>
+  Your <strong style="text-transform: capitalize">{{.Job.Type}}</strong> job was
+  submitted. You will be notified once the job is processed.
+</p>
+
+{{template "details" . }}
+
+{{ end }}
